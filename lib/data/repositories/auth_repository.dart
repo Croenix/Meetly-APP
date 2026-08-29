@@ -179,6 +179,17 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<AppUser?>> {
       state = AsyncValue.error(e, st);
     }
   }
+
+  Future<void> setRole(UserRole role) async {
+    final currentVal = state.value;
+    if (currentVal != null) {
+      final updatedUser = currentVal.copyWith(role: role);
+      state = AsyncValue.data(updatedUser);
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('meetly_user_role', role.name);
+    }
+  }
 }
 
 final authStateProvider = StateNotifierProvider<AuthStateNotifier, AsyncValue<AppUser?>>((ref) {

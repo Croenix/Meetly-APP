@@ -8,6 +8,9 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
 import '../../data/repositories/provider_repository.dart';
+import '../../data/repositories/auth_repository.dart';
+import '../../core/models/app_user.dart';
+import 'package:go_router/go_router.dart';
 
 class ProviderProfileScreen extends ConsumerStatefulWidget {
   const ProviderProfileScreen({super.key});
@@ -251,6 +254,72 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
               child: ElevatedButton(
                 onPressed: () => _saveProfile(provider),
                 child: const Text('Save Changes'),
+              ),
+            ),
+            AppSpacing.height32,
+            const Divider(),
+            AppSpacing.height16,
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : Colors.grey[300]!,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.exit_to_app_outlined,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  AppSpacing.width16,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Exit Workspace',
+                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Exit to the main customer application to request services, manage personal bookings, and view favorites.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.3,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.width12,
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(authStateProvider.notifier).setRole(UserRole.customer);
+                      context.go('/home');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Exit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             ),
           ],

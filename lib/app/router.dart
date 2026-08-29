@@ -14,6 +14,7 @@ import '../features/search/search_screen.dart';
 import '../features/search/category_screen.dart';
 import '../features/providers/provider_profile_screen.dart';
 import '../features/favorites/favorites_screen.dart';
+import '../features/profile/profile_screen.dart';
 
 // Screens implemented in Phase 3
 import '../features/bookings/booking_create_screen.dart';
@@ -120,7 +121,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/profile',
-      builder: (context, state) => const PlaceholderScreen(title: 'Profile Settings'),
+      builder: (context, state) => const ProfileScreen(),
     ),
 
     // Provider Screens
