@@ -375,7 +375,7 @@ class HomeScreen extends ConsumerWidget {
                         
                         return Container(
                           width: double.infinity,
-                          height: 155,
+                          height: 165,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFEBF3FF), Color(0xFFD2E3FC)],
@@ -408,7 +408,7 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -430,10 +430,12 @@ class HomeScreen extends ConsumerWidget {
                                             settings.promoTitle,
                                             style: const TextStyle(
                                               color: Color(0xFF202124),
-                                              fontSize: 20,
+                                              fontSize: 18,
                                               fontWeight: FontWeight.w900,
                                               height: 1.2,
                                             ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                           const SizedBox(height: 8),
                                           SizedBox(

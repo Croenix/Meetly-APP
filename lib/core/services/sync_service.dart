@@ -71,29 +71,79 @@ class AppSettingsNotifier extends StateNotifier<AsyncValue<AppSyncSettings>> {
 
 class SyncService {
   static const String _cacheKey = 'meetly_cached_settings';
+  static const String _serverUrlCacheKey = 'meetly_cached_server_url';
 
-  // Dynamic server url resolution depending on target client platform
-  String get serverUrl {
+  // Getter for standard hardcoded default server URL
+  String get defaultServerUrl {
     if (kIsWeb) return 'http://localhost:5000';
     if (defaultTargetPlatform == TargetPlatform.android) {
-      // Connect to host machine localhost from Android Emulator
       return 'http://10.0.2.2:5000';
     }
     return 'http://localhost:5000';
+  }
+
+  // Resolves localhost strings for Android Emulator compatibility
+  String _resolveUrl(String url) {
+    if (defaultTargetPlatform == TargetPlatform.android && url.contains('localhost')) {
+      return url.replaceAll('localhost', '10.0.2.2');
+    }
+    return url;
+  }
+
+  // Dynamic URL Fetching System from Firebase Realtime Database
+  Future<String> fetchDynamicServerUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Step 1: Attempt to retrieve from Firebase RTDB path 'server_url'
+    try {
+      final dbRef = FirebaseDatabase.instance.ref('server_url');
+      final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
+      if (snapshot.exists) {
+        final url = snapshot.value.toString();
+        await prefs.setString(_serverUrlCacheKey, url);
+        if (kDebugMode) {
+          print("SyncService: Retrieved dynamic server URL from Firebase RTDB: $url");
+        }
+        return _resolveUrl(url);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Firebase server_url fetch failed/offline ($e).");
+      }
+    }
+
+    // Step 2: Fallback to local SharedPreferences cache
+    final cachedUrl = prefs.getString(_serverUrlCacheKey);
+    if (cachedUrl != null && cachedUrl.isNotEmpty) {
+      if (kDebugMode) {
+        print("SyncService: Using cached server URL: $cachedUrl");
+      }
+      return _resolveUrl(cachedUrl);
+    }
+
+    // Step 3: Fallback to default local server configuration
+    final fallbackUrl = defaultServerUrl;
+    if (kDebugMode) {
+      print("SyncService: Falling back to default URL: $fallbackUrl");
+    }
+    return fallbackUrl;
   }
 
   // Primary offline-first fetch sync algorithm
   Future<AppSyncSettings> fetchSyncSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
+    // Resolve dynamic server URL first
+    final activeServerUrl = await fetchDynamicServerUrl();
+    
     // --- STEP 1: Attempt connection to Node.js local admin server ---
     try {
       if (kDebugMode) {
-        print("SyncService: Querying primary Node.js server at $serverUrl/api/settings...");
+        print("SyncService: Querying primary Node.js server at $activeServerUrl/api/settings...");
       }
       
       final client = HttpClientHelper();
-      final responseText = await client.get('$serverUrl/api/settings').timeout(const Duration(seconds: 2));
+      final responseText = await client.get('$activeServerUrl/api/settings').timeout(const Duration(seconds: 2));
       
       final Map<String, dynamic> data = json.decode(responseText);
       
