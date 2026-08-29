@@ -110,19 +110,52 @@
       box-shadow: 0 0 8px var(--error);
     }
 
+    /* Tabs Navigation */
+    .tabs-nav {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      gap: 24px;
+    }
+
+    .tab-button {
+      padding: 16px 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .tab-button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
     main {
       flex: 1;
       padding: 32px;
       max-width: 1200px;
       width: 100%;
       margin: 0 auto;
-      display: grid;
+    }
+
+    .tab-content {
+      display: none;
       grid-template-columns: 1fr 1fr;
       gap: 32px;
     }
 
+    .tab-content.active {
+      display: grid;
+    }
+
     @media (max-width: 900px) {
-      main {
+      .tab-content.active {
         grid-template-columns: 1fr;
       }
     }
@@ -136,6 +169,7 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
+      height: fit-content;
     }
 
     .card-title {
@@ -144,6 +178,9 @@
       letter-spacing: -0.2px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .form-group {
@@ -221,6 +258,23 @@
       transform: scale(0.98);
     }
 
+    .btn-cancel {
+      background-color: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      text-align: center;
+    }
+
+    .btn-cancel:hover {
+      background-color: var(--background);
+    }
+
     /* Live Preview Banner Section */
     .preview-container {
       display: flex;
@@ -238,7 +292,6 @@
       display: flex;
       position: relative;
       overflow: hidden;
-      transition: background 0.3s;
     }
 
     .banner-circle {
@@ -341,6 +394,77 @@
       padding: 4px 0;
     }
 
+    /* Banners List / Categories List */
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background-color: var(--surface);
+      transition: background-color 0.2s;
+    }
+
+    .list-item:hover {
+      background-color: var(--background);
+    }
+
+    .item-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .item-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .item-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+
+    .action-btn.edit {
+      color: var(--primary);
+    }
+
+    .action-btn.edit:hover {
+      background-color: #E8F0FE;
+    }
+
+    .action-btn.delete {
+      color: var(--error);
+    }
+
+    .action-btn.delete:hover {
+      background-color: #FCE8E6;
+    }
+
     /* Toast Notification */
     .toast {
       position: fixed;
@@ -392,140 +516,315 @@
     </div>
   </header>
 
+  <nav class="tabs-nav">
+    <button class="tab-button active" onclick="switchTab('banners-tab', this)">Banners Management</button>
+    <button class="tab-button" onclick="switchTab('categories-tab', this)">Categories Management</button>
+  </nav>
+
   <main>
-    <!-- Left: Settings Form -->
-    <div class="card">
-      <div class="card-title">App Banner Settings</div>
-      
-      <div class="form-group">
-        <label for="promo-subtitle">PROMO SUBTITLE</label>
-        <input type="text" id="promo-subtitle" placeholder="e.g. Save 30% Today!">
-        <div class="preset-chips">
-          <span class="chip" onclick="setSubtitle('SPECIAL OFFER')">SPECIAL OFFER</span>
-          <span class="chip" onclick="setSubtitle('GET 30% OFF TODAY!')">GET 30% OFF TODAY!</span>
-          <span class="chip" onclick="setSubtitle('LIMITED TIME OFFER')">LIMITED TIME OFFER</span>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="promo-title">PROMO TITLE</label>
-        <input type="text" id="promo-title" placeholder="e.g. Professional Help for Your Home">
-      </div>
-
-      <div class="form-group">
-        <label for="promo-discount">DISCOUNT LABEL</label>
-        <input type="text" id="promo-discount" placeholder="e.g. 30%">
-      </div>
-
-      <div class="form-group">
-        <label>BANNER ILLUSTRATION</label>
-        <div class="image-presets">
-          <div class="image-preset-card active" onclick="setPresetImage('', this)">
-            <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:var(--primary);">
-              Default 3D Asset
+    <!-- Tab 1: Banners Tab Content -->
+    <div id="banners-tab" class="tab-content active">
+      <!-- Left: Banners List & Configuration -->
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="card">
+          <div class="card-title">
+            <span>Banner Configurations</span>
+            <button class="chip" onclick="resetForm()" style="background-color: var(--primary); color: white; border: none; font-size: 11px;">+ New Banner</button>
+          </div>
+          
+          <input type="hidden" id="banner-id" value="">
+          
+          <div class="form-group">
+            <label for="promo-subtitle">PROMO SUBTITLE</label>
+            <input type="text" id="promo-subtitle" placeholder="e.g. Save 30% Today!">
+            <div class="preset-chips">
+              <span class="chip" onclick="setSubtitle('SPECIAL OFFER')">SPECIAL OFFER</span>
+              <span class="chip" onclick="setSubtitle('GET 30% OFF TODAY!')">GET 30% OFF TODAY!</span>
+              <span class="chip" onclick="setSubtitle('LIMITED TIME OFFER')">LIMITED TIME OFFER</span>
             </div>
-            <div class="image-preset-label">Local Builder</div>
           </div>
-          <div class="image-preset-card" onclick="setPresetImage('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600', this)">
-            <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=150" alt="Plumber">
-            <div class="image-preset-label">Technician</div>
+
+          <div class="form-group">
+            <label for="promo-title">PROMO TITLE</label>
+            <input type="text" id="promo-title" placeholder="e.g. Professional Help for Your Home">
           </div>
-          <div class="image-preset-card" onclick="setPresetImage('https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600', this)">
-            <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=150" alt="Cleaner">
-            <div class="image-preset-label">Cleaning Pro</div>
+
+          <div class="form-group">
+            <label for="promo-discount">DISCOUNT LABEL</label>
+            <input type="text" id="promo-discount" placeholder="e.g. 30%">
+          </div>
+
+          <div class="form-group">
+            <label>BANNER ILLUSTRATION</label>
+            <div class="image-presets">
+              <div class="image-preset-card active" onclick="setPresetImage('', this)">
+                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:var(--primary);">
+                  Default 3D Asset
+                </div>
+                <div class="image-preset-label">Local Builder</div>
+              </div>
+              <div class="image-preset-card" onclick="setPresetImage('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600', this)">
+                <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=150" alt="Plumber">
+                <div class="image-preset-label">Technician</div>
+              </div>
+              <div class="image-preset-card" onclick="setPresetImage('https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600', this)">
+                <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=150" alt="Cleaner">
+                <div class="image-preset-label">Cleaning Pro</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="custom-image-url">CUSTOM NETWORK IMAGE URL (OPTIONAL)</label>
+            <input type="text" id="custom-image-url" placeholder="Paste custom https://... image URL" oninput="updateCustomImage(this.value)">
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 10px;">
+            <button class="btn-save" onclick="saveBanner()" style="flex: 1;">
+              Save & Sync
+            </button>
+            <button class="btn-cancel" onclick="resetForm()" id="cancel-edit-btn" style="display: none;">
+              Cancel
+            </button>
+          </div>
+        </div>
+        
+        <!-- List of existing banners -->
+        <div class="card">
+          <div class="card-title">Active Promotion Banners</div>
+          <div class="item-list" id="banners-list-container">
+            <!-- Dynamically populated -->
           </div>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="custom-image-url">CUSTOM NETWORK IMAGE URL (OPTIONAL)</label>
-        <input type="text" id="custom-image-url" placeholder="Paste custom https://... image URL" oninput="updateCustomImage(this.value)">
-      </div>
+      <!-- Right: Live Preview Panel -->
+      <div class="preview-container">
+        <div class="card" style="position: sticky; top: 32px;">
+          <div class="card-title">Live Preview (Sliding Carousel Slide)</div>
+          
+          <div class="banner-preview" id="preview-banner">
+            <div class="banner-circle"></div>
+            <div class="banner-content">
+              <div class="banner-subtitle" id="prev-subtitle">Save 30% Today!</div>
+              <div class="banner-title" id="prev-title">Exclusive discounts<br>on home services</div>
+              <div class="banner-btn">Book a Service</div>
+            </div>
+            <div class="banner-image">
+              <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300" class="banner-img-element" id="prev-img" alt="Illustration">
+            </div>
+          </div>
 
-      <button class="btn-save" onclick="saveSettings()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-        Save & Sync to Firebase
-      </button>
+          <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+            <strong>Sliding Carousel Card Preview:</strong> The live preview dynamically renders the currently active editing session. Multiple saved banners will wrap inside a sliding PageView carousel inside the Flutter client.
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Right: Live Preview Panel -->
-    <div class="preview-container">
-      <div class="card" style="position: sticky; top: 32px;">
-        <div class="card-title">Live Preview (Customer Mobile Dashboard)</div>
+    <!-- Tab 2: Categories Tab Content -->
+    <div id="categories-tab" class="tab-content">
+      <!-- Left: Categories CRUD -->
+      <div class="card">
+        <div class="card-title">Manage Service Categories</div>
         
-        <div class="banner-preview" id="preview-banner">
-          <div class="banner-circle"></div>
-          <div class="banner-content">
-            <div class="banner-subtitle" id="prev-subtitle">Save 30% Today!</div>
-            <div class="banner-title" id="prev-title">Exclusive discounts<br>on home services</div>
-            <div class="banner-btn">Book a Service</div>
+        <div class="form-group" style="flex-direction: row; gap: 12px; align-items: flex-end;">
+          <div style="flex: 1;">
+            <label for="new-category-name">CATEGORY NAME</label>
+            <input type="text" id="new-category-name" placeholder="e.g. Landscaping">
           </div>
-          <div class="banner-image">
-            <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300" class="banner-img-element" id="prev-img" alt="Illustration">
-          </div>
+          <button class="btn-save" onclick="addCategory()" style="padding: 12px 24px; font-size: 14px;">
+            Add Category
+          </button>
         </div>
 
-        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
-          <strong>Tip:</strong> The live preview dynamically renders changes to verify the color styling, text size fitting, and layout boundaries before pushing variables to the production database.
+        <div class="item-list" id="categories-list-container" style="margin-top: 10px;">
+          <!-- Dynamically populated -->
         </div>
+      </div>
+      
+      <!-- Right: Info Panel -->
+      <div class="card">
+        <div class="card-title">Category Synced Database Settings</div>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">
+          Managing service categories dynamically updates the category chips and filtering tags on the main customer dashboard.
+        </p>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">
+          Every addition and deletion automatically synchronizes with Firebase Realtime Database. The mobile application retrieves the latest category tree dynamically.
+        </p>
       </div>
     </div>
   </main>
 
   <div class="toast" id="toast-message">
     <span class="toast-icon">✓</span>
-    <span id="toast-text">Settings synced to Firebase!</span>
+    <span id="toast-text">Settings synced!</span>
   </div>
 
   <script>
     let selectedImageUrl = '';
-    const defaultAssetPreviewUrl = '/3d_builder_banner.jpg'; // Serves local asset preview
+    let banners = [];
+    let categories = [];
 
-    // Fetch initial settings from server
-    async function loadInitialSettings() {
+    // Switch between Navigation Tabs
+    function switchTab(tabId, button) {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      button.classList.add('active');
+    }
+
+    // --- BANNERS CRUD IMPLEMENTATION ---
+    async function loadBanners() {
       try {
-        const response = await fetch('/api/settings');
+        const response = await fetch('/api/banners');
         if (response.ok) {
-          const settings = await response.json();
-          document.getElementById('promo-subtitle').value = settings.promoSubtitle;
-          document.getElementById('promo-title').value = settings.promoTitle;
-          document.getElementById('promo-discount').value = settings.promoDiscount;
-          
-          if (settings.bannerImageUrl) {
-            document.getElementById('custom-image-url').value = settings.bannerImageUrl;
-            selectedImageUrl = settings.bannerImageUrl;
-            // Activate corresponding preset card if it matches, else clear active presets
-            clearActivePresetCards();
-            const presets = document.querySelectorAll('.image-preset-card');
-            presets.forEach(p => {
-              const onclickText = p.getAttribute('onclick') || '';
-              if (onclickText.includes(settings.bannerImageUrl)) {
-                p.classList.add('active');
-              }
-            });
-          } else {
-            selectedImageUrl = '';
-          }
-          
-          updateLivePreview();
+          banners = await response.json();
+          renderBannersList();
         }
       } catch (err) {
-        console.error("Failed to load initial settings:", err);
+        console.error("Failed to load banners:", err);
       }
     }
 
-    // Set subtitle from preset chip
+    function renderBannersList() {
+      const container = document.getElementById('banners-list-container');
+      container.innerHTML = '';
+      
+      if (banners.length === 0) {
+        container.innerHTML = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 12px;">No promotion banners defined.</div>';
+        return;
+      }
+
+      banners.forEach(b => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <div class="item-details">
+            <div class="item-title">${escapeHtml(b.promoTitle)}</div>
+            <div class="item-subtitle">${escapeHtml(b.promoSubtitle)} • Discount: ${escapeHtml(b.promoDiscount)}</div>
+          </div>
+          <div class="item-actions">
+            <button class="action-btn edit" onclick="editBanner('${b.id}')" title="Edit Banner">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="action-btn delete" onclick="deleteBanner('${b.id}')" title="Delete Banner">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function editBanner(id) {
+      const banner = banners.find(b => b.id === id);
+      if (!banner) return;
+      
+      document.getElementById('banner-id').value = banner.id;
+      document.getElementById('promo-subtitle').value = banner.promoSubtitle;
+      document.getElementById('promo-title').value = banner.promoTitle;
+      document.getElementById('promo-discount').value = banner.promoDiscount;
+      document.getElementById('custom-image-url').value = banner.bannerImageUrl;
+      selectedImageUrl = banner.bannerImageUrl;
+      
+      // Update image cards selection status
+      clearActivePresetCards();
+      const presets = document.querySelectorAll('.image-preset-card');
+      presets.forEach(p => {
+        const onclickText = p.getAttribute('onclick') || '';
+        if (onclickText.includes(banner.bannerImageUrl)) {
+          p.classList.add('active');
+        }
+      });
+      
+      document.getElementById('cancel-edit-btn').style.display = 'block';
+      updateLivePreview();
+    }
+
+    async function deleteBanner(id) {
+      if (!confirm("Are you sure you want to delete this banner?")) return;
+      
+      try {
+        const response = await fetch(`/api/banners/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          showToast("Banner deleted successfully!");
+          resetForm();
+          loadBanners();
+        }
+      } catch (err) {
+        showToast("Error deleting banner.");
+      }
+    }
+
+    async function saveBanner() {
+      const id = document.getElementById('banner-id').value;
+      const subtitle = document.getElementById('promo-subtitle').value;
+      const title = document.getElementById('promo-title').value;
+      const discount = document.getElementById('promo-discount').value;
+      
+      if (!title) {
+        alert("Promo Title is required.");
+        return;
+      }
+
+      const payload = {
+        promoSubtitle: subtitle,
+        promoTitle: title,
+        promoDiscount: discount,
+        bannerImageUrl: selectedImageUrl
+      };
+
+      if (id) {
+        payload.id = id;
+      }
+
+      try {
+        const response = await fetch('/api/banners', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          showToast(id ? "Banner updated successfully!" : "New banner created!");
+          resetForm();
+          loadBanners();
+        }
+      } catch (err) {
+        showToast("Error saving banner.");
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('banner-id').value = '';
+      document.getElementById('promo-subtitle').value = '';
+      document.getElementById('promo-title').value = '';
+      document.getElementById('promo-discount').value = '';
+      document.getElementById('custom-image-url').value = '';
+      selectedImageUrl = '';
+      
+      clearActivePresetCards();
+      document.querySelectorAll('.image-preset-card')[0].classList.add('active');
+      document.getElementById('cancel-edit-btn').style.display = 'none';
+      updateLivePreview();
+    }
+
     function setSubtitle(text) {
       document.getElementById('promo-subtitle').value = text;
       updateLivePreview();
     }
 
-    // Clear active card states
     function clearActivePresetCards() {
       document.querySelectorAll('.image-preset-card').forEach(c => c.classList.remove('active'));
     }
 
-    // Set image from preset thumbnails
     function setPresetImage(url, element) {
       clearActivePresetCards();
       element.classList.add('active');
@@ -534,11 +833,9 @@
       updateLivePreview();
     }
 
-    // Update preset matching when custom input is edited
     function updateCustomImage(url) {
       selectedImageUrl = url;
       clearActivePresetCards();
-      // Match with presets
       if (!url) {
         document.querySelectorAll('.image-preset-card')[0].classList.add('active');
       } else {
@@ -552,16 +849,11 @@
       updateLivePreview();
     }
 
-    // Listen to form input changes to update visual preview in real time
-    document.getElementById('promo-subtitle').addEventListener('input', updateLivePreview);
-    document.getElementById('promo-title').addEventListener('input', updateLivePreview);
-
     function updateLivePreview() {
       const subtitle = document.getElementById('promo-subtitle').value || 'Save 30% Today!';
       const title = document.getElementById('promo-title').value || 'Exclusive discounts\non home services';
       
       document.getElementById('prev-subtitle').innerText = subtitle;
-      // Convert newlines to br
       document.getElementById('prev-title').innerHTML = title.replace(/\n/g, '<br>');
       
       const imgElement = document.getElementById('prev-img');
@@ -569,55 +861,91 @@
         imgElement.src = selectedImageUrl;
         imgElement.style.display = 'block';
       } else {
-        // Fallback placeholder during preview
         imgElement.src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300';
       }
     }
 
-    // Save and sync Settings
-    async function saveSettings() {
-      const subtitle = document.getElementById('promo-subtitle').value;
-      const title = document.getElementById('promo-title').value;
-      const discount = document.getElementById('promo-discount').value;
+    // --- CATEGORIES CRUD IMPLEMENTATION ---
+    async function loadCategories() {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          categories = await response.json();
+          renderCategoriesList();
+        }
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+      }
+    }
+
+    function renderCategoriesList() {
+      const container = document.getElementById('categories-list-container');
+      container.innerHTML = '';
       
-      const payload = {
-        promoSubtitle: subtitle,
-        promoTitle: title,
-        promoDiscount: discount,
-        bannerImageUrl: selectedImageUrl
-      };
+      if (categories.length === 0) {
+        container.innerHTML = '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 12px;">No categories found.</div>';
+        return;
+      }
+
+      categories.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <div class="item-title">${escapeHtml(c)}</div>
+          <button class="action-btn delete" onclick="deleteCategory('${c}')" title="Delete Category">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    async function addCategory() {
+      const nameInput = document.getElementById('new-category-name');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        alert("Category name is required.");
+        return;
+      }
 
       try {
-        const response = await fetch('/api/settings', {
+        const response = await fetch('/api/categories', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ category: name })
         });
-
+        
         if (response.ok) {
-          const result = await response.json();
-          showToast("Settings saved and synced to Firebase!");
-          
-          const firebaseIndicator = document.getElementById('firebase-status');
-          if (result.firebaseSync && result.firebaseSync.success) {
-            firebaseIndicator.classList.add('online');
-            firebaseIndicator.classList.remove('offline');
-          } else {
-            firebaseIndicator.classList.remove('online');
-            firebaseIndicator.classList.add('offline');
-            showToast("Warning: Firebase Database is offline/failed to sync.");
-          }
-        } else {
-          showToast("Error: Failed to save settings to admin server.");
+          showToast("Category added successfully!");
+          nameInput.value = '';
+          loadCategories();
         }
       } catch (err) {
-        showToast("Error: Server is offline.");
-        console.error(err);
+        showToast("Error adding category.");
       }
     }
 
+    async function deleteCategory(name) {
+      if (!confirm(`Are you sure you want to delete category "${name}"?`)) return;
+      
+      try {
+        const response = await fetch(`/api/categories/${encodeURIComponent(name)}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          showToast("Category deleted successfully!");
+          loadCategories();
+        }
+      } catch (err) {
+        showToast("Error deleting category.");
+      }
+    }
+
+    // --- GENERAL UTILITIES ---
     function showToast(message) {
       const toast = document.getElementById('toast-message');
       document.getElementById('toast-text').innerText = message;
@@ -627,8 +955,23 @@
       }, 3000);
     }
 
-    // Load initial settings
-    loadInitialSettings();
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    document.getElementById('promo-subtitle').addEventListener('input', updateLivePreview);
+    document.getElementById('promo-title').addEventListener('input', updateLivePreview);
+
+    // Initial setup
+    loadBanners();
+    loadCategories();
+    updateLivePreview();
   </script>
 </body>
 </html>

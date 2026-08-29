@@ -11,10 +11,13 @@ const PORT = process.env.PORT || 5000;
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 const CATEGORIES_FILE = path.join(__dirname, 'categories.json');
 const PROVIDERS_FILE = path.join(__dirname, 'providers.json');
+const BANNERS_FILE = path.join(__dirname, 'banners.json');
 
 // Firebase RTDB URL regional endpoints
 const FIREBASE_SETTINGS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/settings.json';
 const FIREBASE_SERVER_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/server_url.json';
+const FIREBASE_BANNERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/banners.json';
+const FIREBASE_CATEGORIES_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/categories.json';
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -176,6 +179,27 @@ if (!fs.existsSync(PROVIDERS_FILE)) {
   fs.writeFileSync(PROVIDERS_FILE, JSON.stringify(defaultProviders, null, 2));
 }
 
+const defaultBanners = [
+  {
+    id: 'b1',
+    promoSubtitle: "Save 30% Today!",
+    promoTitle: "Exclusive discounts on home services",
+    promoDiscount: "30%",
+    bannerImageUrl: ""
+  },
+  {
+    id: 'b2',
+    promoSubtitle: "SPECIAL OFFER",
+    promoTitle: "Top Rated Professional Plumbing Help",
+    promoDiscount: "20%",
+    bannerImageUrl: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600"
+  }
+];
+
+if (!fs.existsSync(BANNERS_FILE)) {
+  fs.writeFileSync(BANNERS_FILE, JSON.stringify(defaultBanners, null, 2));
+}
+
 // Helpers
 function readJsonFile(filePath, fallback) {
   try {
@@ -234,7 +258,7 @@ app.get('/api/categories', (req, res) => {
   res.json(readJsonFile(CATEGORIES_FILE, defaultCategories));
 });
 
-app.post('/api/categories', (req, res) => {
+app.post('/api/categories', async (req, res) => {
   const categories = readJsonFile(CATEGORIES_FILE, defaultCategories);
   const newCat = req.body.category || req.body.name;
   if (!newCat) {
@@ -244,16 +268,70 @@ app.post('/api/categories', (req, res) => {
   if (trimmed && !categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
     categories.push(trimmed);
     writeJsonFile(CATEGORIES_FILE, categories);
+    
+    // Sync to Firebase in real-time
+    await syncToFirebase(FIREBASE_CATEGORIES_URL, categories);
   }
   res.json({ message: "Category added", categories });
 });
 
-app.delete('/api/categories/:name', (req, res) => {
+app.delete('/api/categories/:name', async (req, res) => {
   const categories = readJsonFile(CATEGORIES_FILE, defaultCategories);
   const toDelete = req.params.name;
   const filtered = categories.filter(c => c.toLowerCase() !== toDelete.toLowerCase());
   writeJsonFile(CATEGORIES_FILE, filtered);
+  
+  // Sync to Firebase in real-time
+  await syncToFirebase(FIREBASE_CATEGORIES_URL, filtered);
+  
   res.json({ message: "Category deleted", categories: filtered });
+});
+
+// BANNERS (CRUD Endpoints)
+app.get('/api/banners', (req, res) => {
+  res.json(readJsonFile(BANNERS_FILE, defaultBanners));
+});
+
+app.post('/api/banners', async (req, res) => {
+  const banners = readJsonFile(BANNERS_FILE, defaultBanners);
+  const banner = req.body;
+  
+  if (!banner.promoTitle) {
+    return res.status(400).json({ error: "Banner title is required" });
+  }
+
+  // Create or Update
+  if (!banner.id) {
+    banner.id = 'b_' + Math.random().toString(36).substr(2, 9);
+    banners.push(banner);
+  } else {
+    const index = banners.findIndex(b => b.id === banner.id);
+    if (index !== -1) {
+      banners[index] = { ...banners[index], ...banner };
+    } else {
+      banners.push(banner);
+    }
+  }
+
+  writeJsonFile(BANNERS_FILE, banners);
+  
+  // Sync list to Firebase Realtime Database
+  const synced = await syncToFirebase(FIREBASE_BANNERS_URL, banners);
+  
+  res.json({ message: "Banner saved successfully", banner, firebaseSynced: synced, banners });
+});
+
+app.delete('/api/banners/:id', async (req, res) => {
+  const banners = readJsonFile(BANNERS_FILE, defaultBanners);
+  const toDelete = req.params.id;
+  const filtered = banners.filter(b => b.id !== toDelete);
+  
+  writeJsonFile(BANNERS_FILE, filtered);
+  
+  // Sync list to Firebase Realtime Database
+  const synced = await syncToFirebase(FIREBASE_BANNERS_URL, filtered);
+  
+  res.json({ message: "Banner deleted successfully", firebaseSynced: synced, banners: filtered });
 });
 
 // PROVIDERS

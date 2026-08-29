@@ -368,134 +368,17 @@ class HomeScreen extends ConsumerWidget {
                         .slideY(begin: 0.1, end: 0, delay: 250.ms, curve: Curves.easeOutQuad),
                     AppSpacing.height24,
 
-                    // Interactive Dynamic Promotion Banner (Offline-first Synced)
-                    ref.watch(appSettingsStateProvider).when(
-                      data: (settings) {
-                        final bannerImageUrl = settings.bannerImageUrl;
-                        
-                        return Container(
-                          width: double.infinity,
-                          height: 165,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFEBF3FF), Color(0xFFD2E3FC)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 15,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                right: -20,
-                                top: -20,
-                                bottom: -20,
-                                child: AspectRatio(
-                                  aspectRatio: 1,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withValues(alpha: 0.4),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 6,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            settings.promoSubtitle,
-                                            style: const TextStyle(
-                                              color: Color(0xFF1A73E8),
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            settings.promoTitle,
-                                            style: const TextStyle(
-                                              color: Color(0xFF202124),
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w900,
-                                              height: 1.2,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          SizedBox(
-                                            height: 32,
-                                            child: ElevatedButton(
-                                              onPressed: () => context.push('/search'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF1A73E8),
-                                                foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(20),
-                                                ),
-                                                elevation: 2,
-                                                shadowColor: const Color(0xFF1A73E8).withValues(alpha: 0.4),
-                                              ),
-                                              child: const Text(
-                                                'Book a Service',
-                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 4,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(14),
-                                        child: bannerImageUrl.isNotEmpty
-                                            ? Image.network(
-                                                bannerImageUrl,
-                                                fit: BoxFit.contain,
-                                                alignment: Alignment.centerRight,
-                                                errorBuilder: (context, e, s) => Image.asset(
-                                                  'assets/images/3d_builder_banner.jpg',
-                                                  fit: BoxFit.contain,
-                                                  alignment: Alignment.centerRight,
-                                                ),
-                                              )
-                                            : Image.asset(
-                                                'assets/images/3d_builder_banner.jpg',
-                                                fit: BoxFit.contain,
-                                                alignment: Alignment.centerRight,
-                                              ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
+                    // Interactive Dynamic Promotion Banners Carousel (Offline-first Synced)
+                    ref.watch(appBannersStateProvider).when(
+                      data: (bannersList) {
+                        return BannersCarousel(banners: bannersList)
                             .animate()
                             .fadeIn(delay: 350.ms, duration: 600.ms)
                             .slideY(begin: 0.1, end: 0, delay: 350.ms, curve: Curves.easeOutQuad);
                       },
                       loading: () => Container(
                         width: double.infinity,
-                        height: 155,
+                        height: 165,
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.surfaceDark : Colors.white,
                           borderRadius: BorderRadius.circular(20),
@@ -504,12 +387,12 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       error: (err, _) => Container(
                         width: double.infinity,
-                        height: 155,
+                        height: 165,
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.surfaceDark : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Center(child: Text("Sync Offline")),
+                        child: const Center(child: Text("Sync Offline")),
                       ),
                     ),
                     AppSpacing.height32,
@@ -1004,6 +887,202 @@ class TopPickCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Stateful Widget representing the horizontally sliding Banners Carousel
+class BannersCarousel extends StatefulWidget {
+  final List<PromoBanner> banners;
+
+  const BannersCarousel({super.key, required this.banners});
+
+  @override
+  State<BannersCarousel> createState() => _BannersCarouselState();
+}
+
+class _BannersCarouselState extends State<BannersCarousel> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.banners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final double screenHeight = 165.0;
+
+    return Column(
+      children: [
+        SizedBox(
+          height: screenHeight,
+          width: double.infinity,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: widget.banners.length,
+            itemBuilder: (context, index) {
+              final banner = widget.banners[index];
+              final bannerImageUrl = banner.bannerImageUrl;
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                width: double.infinity,
+                height: screenHeight,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEBF3FF), Color(0xFFD2E3FC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -20,
+                      top: -20,
+                      bottom: -20,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 6,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  banner.promoSubtitle,
+                                  style: const TextStyle(
+                                    color: Color(0xFF1A73E8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  banner.promoTitle,
+                                  style: const TextStyle(
+                                    color: Color(0xFF202124),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 32,
+                                  child: ElevatedButton(
+                                    onPressed: () => context.push('/search'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1A73E8),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      elevation: 2,
+                                      shadowColor: const Color(0xFF1A73E8).withValues(alpha: 0.4),
+                                    ),
+                                    child: const Text(
+                                      'Book a Service',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 4,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: bannerImageUrl.isNotEmpty
+                                  ? Image.network(
+                                      bannerImageUrl,
+                                      fit: BoxFit.contain,
+                                      alignment: Alignment.centerRight,
+                                      errorBuilder: (context, e, s) => Image.asset(
+                                        'assets/images/3d_builder_banner.jpg',
+                                        fit: BoxFit.contain,
+                                        alignment: Alignment.centerRight,
+                                      ),
+                                    )
+                                  : Image.asset(
+                                      'assets/images/3d_builder_banner.jpg',
+                                      fit: BoxFit.contain,
+                                      alignment: Alignment.centerRight,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        if (widget.banners.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              widget.banners.length,
+              (index) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                width: _currentPage == index ? 16.0 : 6.0,
+                height: 6.0,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: _currentPage == index
+                      ? const Color(0xFF1A73E8)
+                      : const Color(0xFF1A73E8).withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

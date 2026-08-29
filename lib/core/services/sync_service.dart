@@ -5,7 +5,44 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Model to represent dynamic app and promo banner settings
+// Model to represent a single promotion banner
+class PromoBanner {
+  final String id;
+  final String promoSubtitle;
+  final String promoTitle;
+  final String promoDiscount;
+  final String bannerImageUrl;
+
+  PromoBanner({
+    required this.id,
+    required this.promoSubtitle,
+    required this.promoTitle,
+    required this.promoDiscount,
+    required this.bannerImageUrl,
+  });
+
+  factory PromoBanner.fromJson(Map<String, dynamic> json) {
+    return PromoBanner(
+      id: json['id']?.toString() ?? '',
+      promoSubtitle: json['promoSubtitle']?.toString() ?? '',
+      promoTitle: json['promoTitle']?.toString() ?? '',
+      promoDiscount: json['promoDiscount']?.toString() ?? '',
+      bannerImageUrl: json['bannerImageUrl']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'promoSubtitle': promoSubtitle,
+      'promoTitle': promoTitle,
+      'promoDiscount': promoDiscount,
+      'bannerImageUrl': bannerImageUrl,
+    };
+  }
+}
+
+// Model to represent dynamic app and promo banner settings (kept for backwards compatibility)
 class AppSyncSettings {
   final String promoSubtitle;
   final String promoTitle;
@@ -45,7 +82,7 @@ class AppSyncSettings {
 // Riverpod Provider for SyncService
 final syncServiceProvider = Provider<SyncService>((ref) => SyncService());
 
-// Riverpod StateNotifierProvider to expose reactively synced settings to UI
+// Riverpod StateNotifierProvider to expose reactively synced settings to UI (legacy settings support)
 final appSettingsStateProvider = StateNotifierProvider<AppSettingsNotifier, AsyncValue<AppSyncSettings>>((ref) {
   final service = ref.watch(syncServiceProvider);
   return AppSettingsNotifier(service);
@@ -69,9 +106,34 @@ class AppSettingsNotifier extends StateNotifier<AsyncValue<AppSyncSettings>> {
   }
 }
 
+// --- NEW REACTIVE LIST PROVIDERS FOR CAROUSEL ---
+final appBannersStateProvider = StateNotifierProvider<AppBannersNotifier, AsyncValue<List<PromoBanner>>>((ref) {
+  final service = ref.watch(syncServiceProvider);
+  return AppBannersNotifier(service);
+});
+
+class AppBannersNotifier extends StateNotifier<AsyncValue<List<PromoBanner>>> {
+  final SyncService _service;
+
+  AppBannersNotifier(this._service) : super(const AsyncValue.loading()) {
+    loadBanners();
+  }
+
+  Future<void> loadBanners() async {
+    state = const AsyncValue.loading();
+    try {
+      final banners = await _service.fetchBanners();
+      state = AsyncValue.data(banners);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
+}
+
 class SyncService {
   static const String _cacheKey = 'meetly_cached_settings';
   static const String _serverUrlCacheKey = 'meetly_cached_server_url';
+  static const String _bannersCacheKey = 'meetly_cached_banners';
 
   // Getter for standard hardcoded default server URL
   String get defaultServerUrl {
@@ -129,7 +191,96 @@ class SyncService {
     return fallbackUrl;
   }
 
-  // Primary offline-first fetch sync algorithm
+  // Fetch multiple banners - Offline-first Sync Algorithm
+  Future<List<PromoBanner>> fetchBanners() async {
+    final prefs = await SharedPreferences.getInstance();
+    final activeServerUrl = await fetchDynamicServerUrl();
+
+    // --- STEP 1: Attempt connection to Node.js local admin server ---
+    try {
+      if (kDebugMode) {
+        print("SyncService: Querying banners from Node.js server at $activeServerUrl/api/banners...");
+      }
+
+      final client = HttpClientHelper();
+      final responseText = await client.get('$activeServerUrl/api/banners').timeout(const Duration(seconds: 2));
+
+      final List<dynamic> rawList = json.decode(responseText);
+      final List<PromoBanner> banners = rawList
+          .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList();
+
+      // Cache locally
+      await prefs.setString(_bannersCacheKey, responseText);
+      if (kDebugMode) {
+        print("SyncService: Node.js banners sync successful. Cached locally.");
+      }
+      return banners;
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Node.js server offline for banners. Switching to Firebase RTDB...");
+      }
+    }
+
+    // --- STEP 2: Fallback to Firebase Realtime Database backup ---
+    try {
+      final dbRef = FirebaseDatabase.instance.ref('banners');
+      final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
+
+      if (snapshot.exists) {
+        final rawVal = snapshot.value;
+        List<dynamic> rawList = [];
+        if (rawVal is List) {
+          rawList = rawVal;
+        } else if (rawVal is Map) {
+          rawList = rawVal.values.toList();
+        }
+
+        final List<PromoBanner> banners = rawList
+            .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+
+        // Cache locally
+        await prefs.setString(_bannersCacheKey, json.encode(rawList));
+        if (kDebugMode) {
+          print("SyncService: Firebase banners sync successful. Cached locally.");
+        }
+        return banners;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Firebase RTDB offline/failed for banners ($e).");
+      }
+    }
+
+    // --- STEP 3: Load cached banners from SharedPreferences ---
+    final cachedText = prefs.getString(_bannersCacheKey);
+    if (cachedText != null && cachedText.isNotEmpty) {
+      try {
+        final List<dynamic> rawList = json.decode(cachedText);
+        return rawList
+            .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+      } catch (e) {
+        if (kDebugMode) {
+          print("SyncService: Error parsing cached banners ($e).");
+        }
+      }
+    }
+
+    // --- STEP 4: Default offline banners fallback ---
+    return [
+      PromoBanner(
+        id: 'default_1',
+        promoSubtitle: "Save 30% Today!",
+        promoTitle: "Exclusive discounts on home services",
+        promoDiscount: "30%",
+        bannerImageUrl: "",
+      )
+    ];
+  }
+
+  // Primary offline-first fetch sync algorithm (legacy settings support)
   Future<AppSyncSettings> fetchSyncSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
