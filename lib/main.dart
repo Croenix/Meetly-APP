@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'core/services/analytics_service.dart';
 import 'firebase_options.dart';
 import 'app/app.dart';
 
@@ -20,6 +21,8 @@ void main() async {
         await Firebase.initializeApp();
       }
     }
+    // Log app open event
+    await AnalyticsService().logAppOpen();
   } catch (e) {
     debugPrint("Firebase initialization skipped/failed: $e");
   }

@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
+const bigQueryService = require('./bigquery_service');
 
 // Initialize Firebase Admin SDK with Resilient Fallbacks
 let db;
@@ -55,6 +56,36 @@ const FIREBASE_CATEGORIES_URL = 'https://meetly-fea92-default-rtdb.asia-southeas
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- ANALYTICS ENDPOINTS ---
+app.get('/api/analytics/overview', async (req, res) => {
+  const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const endDate = req.query.endDate || new Date().toISOString().split('T')[0];
+  try {
+    const data = await bigQueryService.getOverviewMetrics(startDate, endDate);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/analytics/categories', async (req, res) => {
+  try {
+    const data = await bigQueryService.getCategoryClicksDistribution();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/analytics/event', (req, res) => {
+  const { eventName, payload } = req.body;
+  if (!eventName) {
+    return res.status(400).json({ error: 'eventName is required' });
+  }
+  bigQueryService.recordSimulatedEvent(eventName, payload || {});
+  res.json({ success: true });
+});
 
 // --- DEFAULT SEED DATA ---
 const defaultSettings = {

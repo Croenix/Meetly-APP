@@ -16,6 +16,7 @@ import '../../data/repositories/provider_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../core/models/service_provider.dart';
 import '../../core/services/sync_service.dart';
+import '../../core/services/analytics_service.dart';
 
 // StateProvider to reactively store the user selected city location
 final selectedLocationProvider = StateProvider<String?>((ref) => null);
@@ -143,6 +144,10 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(analyticsServiceProvider).logScreenView('Home');
+    });
+
     final authState = ref.watch(authStateProvider);
     final providersAsync = ref.watch(providersListProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -601,9 +606,10 @@ class HomeScreen extends ConsumerWidget {
                                 return Material(
                                       color: Colors.transparent,
                                       child: InkWell(
-                                        onTap: () => context.push(
-                                          '/category/$categoryName',
-                                        ),
+                                        onTap: () {
+                                          ref.read(analyticsServiceProvider).logCategoryClick(categoryName);
+                                          context.push('/category/$categoryName');
+                                        },
                                         borderRadius: BorderRadius.circular(16),
                                         child: Container(
                                           width: 84,
@@ -1193,16 +1199,16 @@ class TopPickCard extends ConsumerWidget {
 }
 
 // Stateful Widget representing the horizontally sliding Banners Carousel
-class BannersCarousel extends StatefulWidget {
+class BannersCarousel extends ConsumerStatefulWidget {
   final List<PromoBanner> banners;
 
   const BannersCarousel({super.key, required this.banners});
 
   @override
-  State<BannersCarousel> createState() => _BannersCarouselState();
+  ConsumerState<BannersCarousel> createState() => _BannersCarouselState();
 }
 
-class _BannersCarouselState extends State<BannersCarousel> {
+class _BannersCarouselState extends ConsumerState<BannersCarousel> {
   late final PageController _pageController;
   int _currentPage = 0;
 
@@ -1315,7 +1321,10 @@ class _BannersCarouselState extends State<BannersCarousel> {
                                 SizedBox(
                                   height: 32,
                                   child: ElevatedButton(
-                                    onPressed: () => context.push('/search'),
+                                    onPressed: () {
+                                      ref.read(analyticsServiceProvider).logBannerClick(banner.id, banner.promoTitle);
+                                      context.push('/search');
+                                    },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF1A73E8),
                                       foregroundColor: Colors.white,

@@ -11,6 +11,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "firebase-admin": "^14.3.0"
+    "firebase-admin": "^14.3.0",
+    "@google-cloud/bigquery": "^7.9.0"
   }
 }

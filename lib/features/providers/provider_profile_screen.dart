@@ -16,6 +16,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/provider_repository.dart';
 import '../../data/repositories/review_repository.dart';
 import '../../data/repositories/service_repository.dart';
+import '../../core/services/analytics_service.dart';
 
 class ProviderProfileScreen extends ConsumerStatefulWidget {
   final String providerId;
@@ -768,6 +769,7 @@ class StickySchedulerCard extends StatelessWidget {
               onPressed: () {
                 servicesAsync.whenData((list) {
                   if (list.isNotEmpty) {
+                    AnalyticsService().logBookingAttempt(provider.id, provider.category);
                     context.push(
                       '/booking/create',
                       extra: {
