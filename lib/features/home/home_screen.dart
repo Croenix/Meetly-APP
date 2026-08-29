@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimensions.dart';
 import '../../app/theme/app_spacing.dart';
@@ -22,10 +23,13 @@ final selectedLocationProvider = StateProvider<String?>((ref) => null);
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-
-  void _showLocationBottomSheet(BuildContext context, WidgetRef ref, String currentLoc) {
+  void _showLocationBottomSheet(
+    BuildContext context,
+    WidgetRef ref,
+    String currentLoc,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -33,8 +37,14 @@ class HomeScreen extends ConsumerWidget {
       ),
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       builder: (context) {
-        final cities = ['Kochi', 'Kottayam', 'Alappuzha', 'Thiruvalla', 'Changanassery'];
-        
+        final cities = [
+          'Kochi',
+          'Kottayam',
+          'Alappuzha',
+          'Thiruvalla',
+          'Changanassery',
+        ];
+
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
@@ -44,16 +54,17 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Select Location',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Find services and pros in your city',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -63,25 +74,32 @@ class HomeScreen extends ConsumerWidget {
                     itemCount: cities.length,
                     itemBuilder: (context, index) {
                       final city = cities[index];
-                      final isSelected = city.toLowerCase() == currentLoc.toLowerCase();
-                      
+                      final isSelected =
+                          city.toLowerCase() == currentLoc.toLowerCase();
+
                       return InkWell(
                         onTap: () {
-                          ref.read(selectedLocationProvider.notifier).state = city;
+                          ref.read(selectedLocationProvider.notifier).state =
+                              city;
                           Navigator.pop(context);
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 16,
+                          ),
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                                ? Theme.of(context).colorScheme.primary
+                                      .withValues(alpha: 0.08)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isSelected
-                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                                  ? Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.3)
                                   : Colors.transparent,
                               width: 1.5,
                             ),
@@ -92,10 +110,14 @@ class HomeScreen extends ConsumerWidget {
                               Text(
                                 city,
                                 style: TextStyle(
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
                                   color: isSelected
                                       ? Theme.of(context).colorScheme.primary
-                                      : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                                      : (isDark
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.textPrimaryLight),
                                 ),
                               ),
                               if (isSelected)
@@ -131,10 +153,13 @@ class HomeScreen extends ConsumerWidget {
       data: (user) {
         if (user == null) return const SizedBox();
 
-        final selectedLocation = ref.watch(selectedLocationProvider) ?? user.location;
+        final selectedLocation =
+            ref.watch(selectedLocationProvider) ?? user.location;
 
         // Load notifications count reactively
-        final notificationsAsync = ref.watch(userNotificationsProvider(user.id));
+        final notificationsAsync = ref.watch(
+          userNotificationsProvider(user.id),
+        );
         final unreadCount = notificationsAsync.maybeWhen(
           data: (list) => list.where((n) => !n.isRead).length,
           orElse: () => 0,
@@ -143,449 +168,704 @@ class HomeScreen extends ConsumerWidget {
         return ResponsiveLayoutShell(
           selectedIndex: 0,
           child: Scaffold(
-            body: SingleChildScrollView(
-              child: ResponsiveContainer(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top Row (Profile Avatar, Greetings & Location Pill, Notifications)
-                    Row(
-                      children: [
-                        AppAvatar(
-                          url: user.avatarUrl,
-                          name: user.name,
-                          size: 48,
-                        ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack).fadeIn(duration: 400.ms),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Hi, ${user.name.split(' ').first}',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              InkWell(
-                                onTap: () => _showLocationBottomSheet(context, ref, selectedLocation),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: 14,
-                                      color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      selectedLocation,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : AppColors.textPrimaryLight,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Icon(
-                                      Icons.keyboard_arrow_down,
-                                      size: 14,
-                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ).animate().fadeIn(delay: 100.ms, duration: 400.ms).slideX(begin: -0.1, end: 0, delay: 100.ms, curve: Curves.easeOutQuad),
-                        ),
-                        
-                        // Notifications Button (Circular White Card)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.surfaceDark : Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.notifications_none_outlined),
-                                onPressed: () => context.push('/notifications'),
-                                style: IconButton.styleFrom(
-                                  shape: const CircleBorder(),
-                                ),
-                              ),
-                              if (unreadCount > 0)
-                                Positioned(
-                                  right: 4,
-                                  top: 4,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.errorLight,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 14,
-                                      minHeight: 14,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '$unreadCount',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ).animate().fadeIn(delay: 300.ms, duration: 400.ms).scale(begin: const Offset(0.9, 0.9), delay: 300.ms, curve: Curves.easeOutBack),
-                      ],
-                    ),
-                    AppSpacing.height24,
-
-                    // Headline
-                    RichText(
-                      text: TextSpan(
-                        style: textTheme.displayLarge?.copyWith(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          height: 1.2,
-                          letterSpacing: -0.6,
-                        ),
+            body: SafeArea(
+              bottom: false,
+              child: SingleChildScrollView(
+                child: ResponsiveContainer(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppSpacing.height16,
+                      // Top Row (Profile Avatar, Centered Location Pill, Notifications)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          TextSpan(
-                            text: 'Find trusted ',
-                            style: TextStyle(color: isDark ? Colors.white : AppColors.textPrimaryLight),
-                          ),
-                          TextSpan(
-                            text: 'local\nservice professionals',
-                            style: TextStyle(
-                              color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 150.ms, duration: 500.ms)
-                        .slideY(begin: 0.15, end: 0, delay: 150.ms, curve: Curves.easeOutQuad),
-                    AppSpacing.height24,
+                          AppAvatar(
+                                url: user.avatarUrl,
+                                name: user.name,
+                                size: 40,
+                              )
+                              .animate()
+                              .scale(
+                                duration: 400.ms,
+                                curve: Curves.easeOutBack,
+                              )
+                              .fadeIn(duration: 400.ms),
 
-                    // Search & Filter Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () => context.push('/search'),
-                            borderRadius: BorderRadius.circular(30),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.surfaceDark : Colors.white,
-                                border: Border.all(
-                                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                                ),
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  if (!isDark)
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.02),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    )
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.search,
-                                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                  ),
-                                  AppSpacing.width12,
-                                  Expanded(
-                                    child: Text(
-                                      'Search',
-                                      style: textTheme.bodyMedium?.copyWith(
-                                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                          ),
+                          // Centered Location Selector Pill
+                          Expanded(
+                                child: Center(
+                                  child: InkWell(
+                                    onTap: () => _showLocationBottomSheet(
+                                      context,
+                                      ref,
+                                      selectedLocation,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // Filter Button (Circular Icon)
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primaryLight, AppColors.secondaryLight],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryLight.withValues(alpha: 0.25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.tune_outlined, color: Colors.white, size: 20),
-                            onPressed: () => context.push('/search'),
-                            constraints: const BoxConstraints(minWidth: 52, minHeight: 52),
-                            padding: EdgeInsets.zero,
-                            style: IconButton.styleFrom(
-                              shape: const CircleBorder(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                        .animate()
-                        .fadeIn(delay: 250.ms, duration: 500.ms)
-                        .slideY(begin: 0.1, end: 0, delay: 250.ms, curve: Curves.easeOutQuad),
-                    AppSpacing.height24,
-
-                    // Interactive Dynamic Promotion Banners Carousel (Offline-first Synced)
-                    ref.watch(appBannersStateProvider).when(
-                      data: (bannersList) {
-                        return BannersCarousel(banners: bannersList)
-                            .animate()
-                            .fadeIn(delay: 350.ms, duration: 600.ms)
-                            .slideY(begin: 0.1, end: 0, delay: 350.ms, curve: Curves.easeOutQuad);
-                      },
-                      loading: () => Container(
-                        width: double.infinity,
-                        height: 165,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.surfaceDark : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      error: (err, _) => Container(
-                        width: double.infinity,
-                        height: 165,
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.surfaceDark : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Center(child: Text("Sync Offline")),
-                      ),
-                    ),
-                    AppSpacing.height32,
-
-                    // Categories Title Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Most Booked Services',
-                          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        TextButton(
-                          onPressed: () => context.push('/search'),
-                          child: const Text('View all'),
-                        ),
-                      ],
-                    )
-                        .animate()
-                        .fadeIn(delay: 400.ms)
-                        .slideX(begin: -0.05, end: 0, delay: 400.ms),
-                    AppSpacing.height12,
-
-                    // Categories Horizontal Scroll Row
-                    categoriesAsync.when(
-                      data: (categories) {
-                        return SizedBox(
-                          height: 110,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: categories.length,
-                            separatorBuilder: (context, index) => const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              final categoryName = categories[index];
-                              return Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => context.push('/category/$categoryName'),
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    width: 84,
-                                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? AppColors.surfaceDark : Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.02),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppColors.surfaceDark
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? AppColors.borderDark
+                                              : AppColors.borderLight,
                                         ),
-                                      ],
-                                    ),
-                                    child: IgnorePointer(
-                                      child: CategoryCard.fromName(categoryName),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.03,
+                                            ),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 14,
+                                            color: isDark
+                                                ? AppColors.primaryDark
+                                                : AppColors.primaryLight,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              selectedLocation,
+                                              style: textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                    color: isDark
+                                                        ? Colors.white
+                                                        : AppColors
+                                                              .textPrimaryLight,
+                                                  ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            size: 14,
+                                            color: isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondaryLight,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               )
-                                  .animate()
-                                  .fadeIn(delay: (50 * index + 400).ms, duration: 350.ms)
-                                  .slideX(begin: 0.1, end: 0, curve: Curves.easeOutQuad, duration: 350.ms);
-                            },
-                          ),
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Text('Error loading categories: $e'),
-                    ),
-                    AppSpacing.height32,
+                              .animate()
+                              .fadeIn(delay: 100.ms, duration: 400.ms)
+                              .slideY(
+                                begin: -0.1,
+                                end: 0,
+                                delay: 100.ms,
+                                curve: Curves.easeOutQuad,
+                              ),
 
-                    // Load provider states
-                    providersAsync.when(
-                      data: (providers) {
-                        // Recommended (Highest rated, verified)
-                        final recommendedList = providers
-                            .where((p) => p.rating >= 4.7 && p.verified)
-                            .take(5)
-                            .toList();
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 3. Top Picks for you
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Top Picks for you',
-                                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          // Notifications Button (Circular White Card)
+                          Container(
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.surfaceDark
+                                      : Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppColors.borderDark
+                                        : AppColors.borderLight,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.04,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                TextButton(
-                                  onPressed: () => context.push('/search'),
-                                  child: const Text('View all'),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.notifications_none_outlined,
+                                      ),
+                                      onPressed: () =>
+                                          context.push('/notifications'),
+                                      style: IconButton.styleFrom(
+                                        shape: const CircleBorder(),
+                                      ),
+                                    ),
+                                    if (unreadCount > 0)
+                                      Positioned(
+                                        right: 4,
+                                        top: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.errorLight,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 14,
+                                            minHeight: 14,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '$unreadCount',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              ],
-                            )
-                                .animate()
-                                .fadeIn(delay: 450.ms)
-                                .slideX(begin: -0.05, end: 0, delay: 450.ms),
-                            AppSpacing.height12,
-                            ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: recommendedList.length,
-                              separatorBuilder: (context, index) => AppSpacing.height16,
-                              itemBuilder: (context, index) {
-                                return TopPickCard(provider: recommendedList[index])
-                                    .animate()
-                                    .fadeIn(delay: (100 * index + 450).ms, duration: 400.ms)
-                                    .slideY(begin: 0.1, end: 0, delay: (100 * index + 450).ms, curve: Curves.easeOutQuad);
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Text('Error loading providers: $e'),
-                    ),
-                    AppSpacing.height32,
-
-                    // 4. How Meetly Works Section
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceDark : AppColors.primaryLight.withValues(alpha: 0.05),
-                        borderRadius: AppDimensions.borderLarge,
-                        border: Border.all(
-                          color: isDark ? AppColors.borderDark : AppColors.primaryLight.withValues(alpha: 0.1),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'How Meetly Works',
-                            style: textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : AppColors.primaryLight,
-                                ),
-                          ),
-                          AppSpacing.height16,
-                          SizedBox(
-                            height: 115,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                _buildStepCard(context, '1', 'Search', 'Find certified, local experts.', Icons.search, isDark)
-                                    .animate()
-                                    .fadeIn(delay: 650.ms, duration: 400.ms)
-                                    .scale(begin: const Offset(0.95, 0.95), delay: 650.ms, curve: Curves.easeOutBack),
-                                const SizedBox(width: 12),
-                                _buildStepCard(context, '2', 'Connect', 'Compare stars and chat.', Icons.chat_bubble_outline, isDark)
-                                    .animate()
-                                    .fadeIn(delay: 750.ms, duration: 400.ms)
-                                    .scale(begin: const Offset(0.95, 0.95), delay: 750.ms, curve: Curves.easeOutBack),
-                                const SizedBox(width: 12),
-                                _buildStepCard(context, '3', 'Book', 'Schedule date/time easily.', Icons.calendar_today_outlined, isDark)
-                                    .animate()
-                                    .fadeIn(delay: 850.ms, duration: 400.ms)
-                                    .scale(begin: const Offset(0.95, 0.95), delay: 850.ms, curve: Curves.easeOutBack),
-                                const SizedBox(width: 12),
-                                _buildStepCard(context, '4', 'Grow', 'Write reviews & support pros.', Icons.trending_up, isDark)
-                                    .animate()
-                                    .fadeIn(delay: 950.ms, duration: 400.ms)
-                                    .scale(begin: const Offset(0.95, 0.95), delay: 950.ms, curve: Curves.easeOutBack),
-                              ],
-                            ),
-                          ),
+                              )
+                              .animate()
+                              .fadeIn(delay: 300.ms, duration: 400.ms)
+                              .scale(
+                                begin: const Offset(0.9, 0.9),
+                                delay: 300.ms,
+                                curve: Curves.easeOutBack,
+                              ),
                         ],
                       ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 600.ms)
-                        .slideY(begin: 0.1, end: 0, delay: 600.ms, curve: Curves.easeOutQuad),
-                    AppSpacing.height32,
-                  ],
+                      AppSpacing.height24,
+
+                      // Greeting (Moved out of top row to save header height)
+                      Text(
+                            'Hi, ${user.name.split(' ').first} 👋',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 100.ms, duration: 400.ms)
+                          .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            delay: 100.ms,
+                            curve: Curves.easeOutQuad,
+                          ),
+                      const SizedBox(height: 4),
+
+                      // Headline
+                      RichText(
+                            text: TextSpan(
+                              style: textTheme.displayLarge?.copyWith(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                height: 1.2,
+                                letterSpacing: -0.6,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Find trusted ',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white
+                                        : AppColors.textPrimaryLight,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'local\nservice professionals',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? AppColors.primaryDark
+                                        : AppColors.primaryLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 150.ms, duration: 500.ms)
+                          .slideY(
+                            begin: 0.15,
+                            end: 0,
+                            delay: 150.ms,
+                            curve: Curves.easeOutQuad,
+                          ),
+                      AppSpacing.height24,
+
+                      // Search & Filter Row
+                      Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => context.push('/search'),
+                                  borderRadius: BorderRadius.circular(30),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? AppColors.surfaceDark
+                                          : Colors.white,
+                                      border: Border.all(
+                                        color: isDark
+                                            ? AppColors.borderDark
+                                            : AppColors.borderLight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(30),
+                                      boxShadow: [
+                                        if (!isDark)
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.02,
+                                            ),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.search,
+                                          color: isDark
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondaryLight,
+                                        ),
+                                        AppSpacing.width12,
+                                        Expanded(
+                                          child: Text(
+                                            'Search',
+                                            style: textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: isDark
+                                                      ? AppColors
+                                                            .textSecondaryDark
+                                                      : AppColors
+                                                            .textSecondaryLight,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Filter Button (Circular Icon)
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      AppColors.primaryLight,
+                                      AppColors.secondaryLight,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primaryLight.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.tune_outlined,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => context.push('/search'),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 52,
+                                    minHeight: 52,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  style: IconButton.styleFrom(
+                                    shape: const CircleBorder(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                          .animate()
+                          .fadeIn(delay: 250.ms, duration: 500.ms)
+                          .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            delay: 250.ms,
+                            curve: Curves.easeOutQuad,
+                          ),
+                      AppSpacing.height24,
+
+                      // Interactive Dynamic Promotion Banners Carousel (Offline-first Synced)
+                      ref
+                          .watch(appBannersStateProvider)
+                          .when(
+                            data: (bannersList) {
+                              return BannersCarousel(banners: bannersList)
+                                  .animate()
+                                  .fadeIn(delay: 350.ms, duration: 600.ms)
+                                  .slideY(
+                                    begin: 0.1,
+                                    end: 0,
+                                    delay: 350.ms,
+                                    curve: Curves.easeOutQuad,
+                                  );
+                            },
+                            loading: () => Container(
+                              width: double.infinity,
+                              height: 165,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.surfaceDark
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            error: (err, _) => Container(
+                              width: double.infinity,
+                              height: 165,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.surfaceDark
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Center(child: Text("Sync Offline")),
+                            ),
+                          ),
+                      AppSpacing.height32,
+
+                      // Categories Title Header
+                      Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Most Booked Services',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => context.push('/search'),
+                                child: const Text('View all'),
+                              ),
+                            ],
+                          )
+                          .animate()
+                          .fadeIn(delay: 400.ms)
+                          .slideX(begin: -0.05, end: 0, delay: 400.ms),
+                      AppSpacing.height12,
+
+                      // Categories Horizontal Scroll Row
+                      categoriesAsync.when(
+                        data: (categories) {
+                          return SizedBox(
+                            height: 110,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: categories.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(width: 12),
+                              itemBuilder: (context, index) {
+                                final categoryName = categories[index];
+                                return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => context.push(
+                                          '/category/$categoryName',
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Container(
+                                          width: 84,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                            horizontal: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? AppColors.surfaceDark
+                                                : Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            border: Border.all(
+                                              color: isDark
+                                                  ? AppColors.borderDark
+                                                  : AppColors.borderLight,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.02,
+                                                ),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: IgnorePointer(
+                                            child: CategoryCard.fromName(
+                                              categoryName,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .animate()
+                                    .fadeIn(
+                                      delay: (50 * index + 400).ms,
+                                      duration: 350.ms,
+                                    )
+                                    .slideX(
+                                      begin: 0.1,
+                                      end: 0,
+                                      curve: Curves.easeOutQuad,
+                                      duration: 350.ms,
+                                    );
+                              },
+                            ),
+                          );
+                        },
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (e, _) => Text('Error loading categories: $e'),
+                      ),
+                      AppSpacing.height32,
+
+                      // Load provider states
+                      providersAsync.when(
+                        data: (providers) {
+                          // Recommended (Highest rated, verified)
+                          final recommendedList = providers
+                              .where((p) => p.rating >= 4.7 && p.verified)
+                              .take(5)
+                              .toList();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 3. Top Picks for you
+                              Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Top Picks for you',
+                                        style: textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            context.push('/search'),
+                                        child: const Text('View all'),
+                                      ),
+                                    ],
+                                  )
+                                  .animate()
+                                  .fadeIn(delay: 450.ms)
+                                  .slideX(begin: -0.05, end: 0, delay: 450.ms),
+                              AppSpacing.height12,
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: recommendedList.length,
+                                separatorBuilder: (context, index) =>
+                                    AppSpacing.height16,
+                                itemBuilder: (context, index) {
+                                  return TopPickCard(
+                                        provider: recommendedList[index],
+                                      )
+                                      .animate()
+                                      .fadeIn(
+                                        delay: (100 * index + 450).ms,
+                                        duration: 400.ms,
+                                      )
+                                      .slideY(
+                                        begin: 0.1,
+                                        end: 0,
+                                        delay: (100 * index + 450).ms,
+                                        curve: Curves.easeOutQuad,
+                                      );
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (e, _) => Text('Error loading providers: $e'),
+                      ),
+                      AppSpacing.height32,
+
+                      // 4. How Meetly Works Section
+                      Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.surfaceDark
+                                  : AppColors.primaryLight.withValues(
+                                      alpha: 0.05,
+                                    ),
+                              borderRadius: AppDimensions.borderLarge,
+                              border: Border.all(
+                                color: isDark
+                                    ? AppColors.borderDark
+                                    : AppColors.primaryLight.withValues(
+                                        alpha: 0.1,
+                                      ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'How Meetly Works',
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.white
+                                        : AppColors.primaryLight,
+                                  ),
+                                ),
+                                AppSpacing.height16,
+                                SizedBox(
+                                  height: 115,
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    children: [
+                                      _buildStepCard(
+                                            context,
+                                            '1',
+                                            'Search',
+                                            'Find certified, local experts.',
+                                            Icons.search,
+                                            isDark,
+                                          )
+                                          .animate()
+                                          .fadeIn(
+                                            delay: 650.ms,
+                                            duration: 400.ms,
+                                          )
+                                          .scale(
+                                            begin: const Offset(0.95, 0.95),
+                                            delay: 650.ms,
+                                            curve: Curves.easeOutBack,
+                                          ),
+                                      const SizedBox(width: 12),
+                                      _buildStepCard(
+                                            context,
+                                            '2',
+                                            'Connect',
+                                            'Compare stars and chat.',
+                                            Icons.chat_bubble_outline,
+                                            isDark,
+                                          )
+                                          .animate()
+                                          .fadeIn(
+                                            delay: 750.ms,
+                                            duration: 400.ms,
+                                          )
+                                          .scale(
+                                            begin: const Offset(0.95, 0.95),
+                                            delay: 750.ms,
+                                            curve: Curves.easeOutBack,
+                                          ),
+                                      const SizedBox(width: 12),
+                                      _buildStepCard(
+                                            context,
+                                            '3',
+                                            'Book',
+                                            'Schedule date/time easily.',
+                                            Icons.calendar_today_outlined,
+                                            isDark,
+                                          )
+                                          .animate()
+                                          .fadeIn(
+                                            delay: 850.ms,
+                                            duration: 400.ms,
+                                          )
+                                          .scale(
+                                            begin: const Offset(0.95, 0.95),
+                                            delay: 850.ms,
+                                            curve: Curves.easeOutBack,
+                                          ),
+                                      const SizedBox(width: 12),
+                                      _buildStepCard(
+                                            context,
+                                            '4',
+                                            'Grow',
+                                            'Write reviews & support pros.',
+                                            Icons.trending_up,
+                                            isDark,
+                                          )
+                                          .animate()
+                                          .fadeIn(
+                                            delay: 950.ms,
+                                            duration: 400.ms,
+                                          )
+                                          .scale(
+                                            begin: const Offset(0.95, 0.95),
+                                            delay: 950.ms,
+                                            curve: Curves.easeOutBack,
+                                          ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .animate()
+                          .fadeIn(delay: 600.ms)
+                          .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            delay: 600.ms,
+                            curve: Curves.easeOutQuad,
+                          ),
+                      AppSpacing.height32,
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Scaffold(
-        body: Center(child: Text('Auth Error: $e')),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(body: Center(child: Text('Auth Error: $e'))),
     );
   }
 
@@ -621,11 +901,7 @@ class HomeScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Icon(
-                    icon,
-                    size: 14,
-                    color: AppColors.primaryLight,
-                  ),
+                  child: Icon(icon, size: 14, color: AppColors.primaryLight),
                 ),
               ),
               Container(
@@ -659,7 +935,9 @@ class HomeScreen extends ConsumerWidget {
               description,
               style: TextStyle(
                 fontSize: 10,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
                 height: 1.3,
               ),
               maxLines: 2,
@@ -722,7 +1000,8 @@ class TopPickCard extends ConsumerWidget {
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, e, s) => Container(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.1),
                     child: const Icon(Icons.broken_image_outlined, size: 40),
                   ),
                 ),
@@ -749,7 +1028,10 @@ class TopPickCard extends ConsumerWidget {
                 top: 14,
                 left: 14,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFFFE845F), Color(0xFFFE583B)],
@@ -766,7 +1048,11 @@ class TopPickCard extends ConsumerWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.access_time_filled, size: 12, color: Colors.white),
+                      Icon(
+                        Icons.access_time_filled,
+                        size: 12,
+                        color: Colors.white,
+                      ),
                       SizedBox(width: 4),
                       Text(
                         '24/7 Support',
@@ -802,11 +1088,15 @@ class TopPickCard extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     icon: Icon(
                       isFav ? Icons.favorite : Icons.favorite_border,
-                      color: isFav ? AppColors.errorLight : AppColors.textSecondaryLight,
+                      color: isFav
+                          ? AppColors.errorLight
+                          : AppColors.textSecondaryLight,
                       size: 18,
                     ),
                     onPressed: () async {
-                      await ref.read(providerRepositoryProvider).toggleFavorite(provider.id);
+                      await ref
+                          .read(providerRepositoryProvider)
+                          .toggleFavorite(provider.id);
                       ref.invalidate(favoritesListProvider);
                     },
                   ),
@@ -857,16 +1147,27 @@ class TopPickCard extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.star, size: 14, color: AppColors.warningLight),
+                            const Icon(
+                              Icons.star,
+                              size: 14,
+                              color: AppColors.warningLight,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               provider.rating.toStringAsFixed(1),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '(${provider.reviewCount} reviews)',
-                              style: const TextStyle(color: Colors.white60, fontSize: 11),
+                              style: const TextStyle(
+                                color: Colors.white60,
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -978,7 +1279,10 @@ class _BannersCarouselState extends State<BannersCarousel> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 12.0,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -1015,16 +1319,22 @@ class _BannersCarouselState extends State<BannersCarousel> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF1A73E8),
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       elevation: 2,
-                                      shadowColor: const Color(0xFF1A73E8).withValues(alpha: 0.4),
+                                      shadowColor: const Color(0xFF1A73E8)
+                                          .withValues(alpha: 0.4),
                                     ),
                                     child: const Text(
                                       'Book a Service',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1040,11 +1350,12 @@ class _BannersCarouselState extends State<BannersCarousel> {
                                       bannerImageUrl,
                                       fit: BoxFit.contain,
                                       alignment: Alignment.centerRight,
-                                      errorBuilder: (context, e, s) => Image.asset(
-                                        'assets/images/3d_builder_banner.jpg',
-                                        fit: BoxFit.contain,
-                                        alignment: Alignment.centerRight,
-                                      ),
+                                      errorBuilder: (context, e, s) =>
+                                          Image.asset(
+                                            'assets/images/3d_builder_banner.jpg',
+                                            fit: BoxFit.contain,
+                                            alignment: Alignment.centerRight,
+                                          ),
                                     )
                                   : Image.asset(
                                       'assets/images/3d_builder_banner.jpg',

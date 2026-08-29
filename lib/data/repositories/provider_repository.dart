@@ -1,14 +1,19 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../core/models/service_provider.dart';
-import '../../core/services/sync_service.dart';
 import '../../core/database/local_database.dart';
 import '../mock/mock_providers.dart';
 import 'auth_repository.dart';
+
+// Helper to resolve the correct regional database instance
+FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
+      app: Firebase.app(),
+      databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
+    );
 
 abstract class ProviderRepository {
   Future<List<ServiceProvider>> getProviders();
@@ -25,9 +30,8 @@ abstract class ProviderRepository {
 class SyncedProviderRepository implements ProviderRepository {
   static const String _keyFavorites = 'meetly_favorites';
   static const String _dbKey = 'providers';
-  final SyncService _syncService;
 
-  SyncedProviderRepository(this._syncService);
+  SyncedProviderRepository();
 
   @override
   Future<List<ServiceProvider>> getProviders() async {
@@ -84,27 +88,46 @@ class SyncedProviderRepository implements ProviderRepository {
 
   @override
   Future<void> updateProviderProfile(ServiceProvider provider) async {
-    final serverUrl = await _syncService.fetchDynamicServerUrl();
+    // Proactively try to sync pending queue first
+    await syncPendingQueue();
 
     try {
-      final httpClient = HttpClient();
-      final uri = Uri.parse('$serverUrl/api/providers');
-      final request = await httpClient.postUrl(uri);
-      request.headers.set('content-type', 'application/json');
-      request.add(utf8.encode(json.encode(provider.toJson())));
+      final dbRef = _database.ref('providers');
+      final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
       
-      final response = await request.close();
-      httpClient.close();
-      
-      if (response.statusCode == 200) {
-        if (kDebugMode) {
-          print("ProviderRepo: Profile successfully synced to Node.js backend.");
+      List<ServiceProvider> list = [];
+      if (snapshot.exists) {
+        final rawVal = snapshot.value;
+        List<dynamic> rawList = [];
+        if (rawVal is List) {
+          rawList = rawVal;
+        } else if (rawVal is Map) {
+          rawList = rawVal.values.toList();
         }
-        return;
+        list = rawList
+            .map((item) => ServiceProvider.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+      } else {
+        list = await getProviders();
       }
+
+      final index = list.indexWhere((p) => p.id == provider.id);
+      if (index != -1) {
+        list[index] = provider;
+      } else {
+        list.add(provider);
+      }
+
+      final mapList = list.map((p) => p.toJson()).toList();
+      await dbRef.set(mapList);
+      await HiveLocalDatabase.instance.saveMapList(_dbKey, mapList);
+      if (kDebugMode) {
+        print("ProviderRepo: Profile successfully updated directly on Firebase RTDB.");
+      }
+      return;
     } catch (e) {
       if (kDebugMode) {
-        print("ProviderRepo: Server offline. Queueing profile update task.");
+        print("ProviderRepo: Firebase write failed. Queueing profile update task.");
       }
     }
 
@@ -145,7 +168,6 @@ class SyncedProviderRepository implements ProviderRepository {
     final queue = await HiveLocalDatabase.instance.getQueue();
     if (queue.isEmpty) return;
 
-    final serverUrl = await _syncService.fetchDynamicServerUrl();
     final List<Map<String, dynamic>> remainingTasks = [];
     bool failed = false;
 
@@ -160,15 +182,36 @@ class SyncedProviderRepository implements ProviderRepository {
 
       if (action == 'updateProvider') {
         try {
-          final httpClient = HttpClient();
-          final uri = Uri.parse('$serverUrl/api/providers');
-          final request = await httpClient.postUrl(uri);
-          request.headers.set('content-type', 'application/json');
-          request.add(utf8.encode(json.encode(payload)));
+          final dbRef = _database.ref('providers');
+          final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
           
-          final response = await request.close();
-          httpClient.close();
-          if (response.statusCode != 200) throw Exception("Failed");
+          List<ServiceProvider> list = [];
+          if (snapshot.exists) {
+            final rawVal = snapshot.value;
+            List<dynamic> rawList = [];
+            if (rawVal is List) {
+              rawList = rawVal;
+            } else if (rawVal is Map) {
+              rawList = rawVal.values.toList();
+            }
+            list = rawList
+                .map((item) => ServiceProvider.fromJson(Map<String, dynamic>.from(item as Map)))
+                .toList();
+          } else {
+            list = await getProviders();
+          }
+
+          final updatedProvider = ServiceProvider.fromJson(payload);
+          final index = list.indexWhere((p) => p.id == updatedProvider.id);
+          if (index != -1) {
+            list[index] = updatedProvider;
+          } else {
+            list.add(updatedProvider);
+          }
+
+          final mapList = list.map((p) => p.toJson()).toList();
+          await dbRef.set(mapList);
+          await HiveLocalDatabase.instance.saveMapList(_dbKey, mapList);
         } catch (e) {
           if (kDebugMode) {
             print("ProviderRepo: Queue sync failed for task $action: $e. Pausing sync.");
@@ -194,14 +237,13 @@ class SyncedProviderRepository implements ProviderRepository {
 
 // Riverpod Provider
 final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
-  final syncService = ref.watch(syncServiceProvider);
-  return SyncedProviderRepository(syncService);
+  return SyncedProviderRepository();
 });
 
 // StreamProvider listening directly to Realtime Database /providers node
 final providersListProvider = StreamProvider<List<ServiceProvider>>((ref) {
   try {
-    return FirebaseDatabase.instance.ref('providers').onValue.map((event) {
+    return _database.ref('providers').onValue.map((event) {
       final rawVal = event.snapshot.value;
       List<dynamic> rawList = [];
       if (rawVal is List) {

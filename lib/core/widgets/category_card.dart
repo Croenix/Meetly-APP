@@ -19,84 +19,97 @@ class CategoryCard extends StatelessWidget {
   });
 
   factory CategoryCard.fromName(String name) {
-    // Map categories to modern custom colored cards
-    switch (name) {
-      case 'Electrician':
-        return const CategoryCard(
-          categoryName: 'Electrician',
+    // Map categories case-insensitively to custom colored cards with original name preserved
+    switch (name.toLowerCase()) {
+      case 'electrician':
+      case 'electrical':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.electric_bolt_outlined,
-          backgroundColor: Color(0xFFEEF2FF), // soft indigo
-          iconColor: Color(0xFF4F46E5),
+          backgroundColor: const Color(0xFFEEF2FF), // soft indigo
+          iconColor: const Color(0xFF4F46E5),
         );
-      case 'Plumber':
-        return const CategoryCard(
-          categoryName: 'Plumber',
+      case 'plumber':
+      case 'plumbing':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.water_drop_outlined,
-          backgroundColor: Color(0xFFE0F2FE), // soft blue
-          iconColor: Color(0xFF0284C7),
+          backgroundColor: const Color(0xFFE0F2FE), // soft blue
+          iconColor: const Color(0xFF0284C7),
         );
-      case 'AC Repair':
-        return const CategoryCard(
-          categoryName: 'AC Repair',
+      case 'ac repair':
+      case 'appliance':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.ac_unit_outlined,
-          backgroundColor: Color(0xFFE0F7FA), // soft cyan
-          iconColor: Color(0xFF00ACC1),
+          backgroundColor: const Color(0xFFE0F7FA), // soft cyan
+          iconColor: const Color(0xFF00ACC1),
         );
-      case 'Cleaning':
-        return const CategoryCard(
-          categoryName: 'Cleaning',
+      case 'cleaning':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.cleaning_services_outlined,
-          backgroundColor: Color(0xFFDCFCE7), // soft green
-          iconColor: Color(0xFF16A34A),
+          backgroundColor: const Color(0xFFDCFCE7), // soft green
+          iconColor: const Color(0xFF16A34A),
         );
-      case 'Carpenter':
-        return const CategoryCard(
-          categoryName: 'Carpenter',
+      case 'carpenter':
+      case 'carpentry':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.handyman_outlined,
-          backgroundColor: Color(0xFFFEF3C7), // soft amber
-          iconColor: Color(0xFFD97706),
+          backgroundColor: const Color(0xFFFEF3C7), // soft amber
+          iconColor: const Color(0xFFD97706),
         );
-      case 'Painter':
-        return const CategoryCard(
-          categoryName: 'Painter',
+      case 'painter':
+      case 'painting':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.format_paint_outlined,
-          backgroundColor: Color(0xFFFDF2F8), // soft pink
-          iconColor: Color(0xFFDB2777),
+          backgroundColor: const Color(0xFFFDF2F8), // soft pink
+          iconColor: const Color(0xFFDB2777),
         );
-      case 'Computer Repair':
-        return const CategoryCard(
-          categoryName: 'Computer Repair',
+      case 'computer repair':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.laptop_mac_outlined,
-          backgroundColor: Color(0xFFF1F5F9), // soft grey
-          iconColor: Color(0xFF475569),
+          backgroundColor: const Color(0xFFF1F5F9), // soft grey
+          iconColor: const Color(0xFF475569),
         );
-      case 'Tutor':
-        return const CategoryCard(
-          categoryName: 'Tutor',
+      case 'tutor':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.school_outlined,
-          backgroundColor: Color(0xFFFAF5FF), // soft purple
-          iconColor: Color(0xFF9333EA),
+          backgroundColor: const Color(0xFFFAF5FF), // soft purple
+          iconColor: const Color(0xFF9333EA),
         );
-      case 'Mechanic':
-        return const CategoryCard(
-          categoryName: 'Mechanic',
+      case 'mechanic':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.build_circle_outlined,
-          backgroundColor: Color(0xFFFFF7ED), // soft orange
-          iconColor: Color(0xFFEA580C),
+          backgroundColor: const Color(0xFFFFF7ED), // soft orange
+          iconColor: const Color(0xFFEA580C),
         );
-      case 'Beauty':
-        return const CategoryCard(
-          categoryName: 'Beauty',
+      case 'pest control':
+        return CategoryCard(
+          categoryName: name,
+          icon: Icons.bug_report_outlined,
+          backgroundColor: const Color(0xFFFEE2E2), // soft red
+          iconColor: const Color(0xFFEF4444),
+        );
+      case 'beauty':
+      case 'salon':
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.face_retouching_natural_outlined,
-          backgroundColor: Color(0xFFFFF1F2), // soft rose
-          iconColor: Color(0xFFE11D48),
+          backgroundColor: const Color(0xFFFFF1F2), // soft rose
+          iconColor: const Color(0xFFE11D48),
         );
       default:
-        return const CategoryCard(
-          categoryName: 'General',
+        return CategoryCard(
+          categoryName: name,
           icon: Icons.miscellaneous_services_outlined,
-          backgroundColor: Color(0xFFF8FAFC),
-          iconColor: Color(0xFF64748B),
+          backgroundColor: const Color(0xFFF8FAFC),
+          iconColor: const Color(0xFF64748B),
         );
     }
   }

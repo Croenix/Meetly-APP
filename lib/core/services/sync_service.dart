@@ -1,10 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Helper to resolve the correct regional database instance
+FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
+      app: Firebase.app(),
+      databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
+    );
 
 // Model to represent a single promotion banner
 class PromoBanner {
@@ -43,13 +49,13 @@ class PromoBanner {
   }
 }
 
-// Model to represent dynamic app and promo banner settings (kept for backwards compatibility)
+// Model to represent dynamic app settings
 class AppSyncSettings {
   final String promoSubtitle;
   final String promoTitle;
   final String promoDiscount;
   final String bannerImageUrl;
-  final String source; // 'nodejs', 'firebase', 'cache', 'default'
+  final String source; // 'firebase', 'cache', 'default'
 
   AppSyncSettings({
     required this.promoSubtitle,
@@ -111,7 +117,7 @@ class AppSettingsNotifier extends StateNotifier<AsyncValue<AppSyncSettings>> {
 
     // Real-Time Database listener binding
     try {
-      _subscription = FirebaseDatabase.instance.ref('settings').onValue.listen((event) {
+      _subscription = _database.ref('settings').onValue.listen((event) {
         if (!event.snapshot.exists) return;
         
         final rawVal = event.snapshot.value as Map<dynamic, dynamic>;
@@ -125,9 +131,9 @@ class AppSettingsNotifier extends StateNotifier<AsyncValue<AppSyncSettings>> {
           state = AsyncValue.data(settings);
         }
 
-        // Cache locally in SharedPreferences asynchronously
+        // Cache locally in SharedPreferences
         SharedPreferences.getInstance().then((prefs) {
-          prefs.setString('meetly_cached_settings', json.encode(converted));
+          prefs.setString(SyncService._cacheKey, json.encode(converted));
         });
       });
     } catch (e) {
@@ -159,7 +165,7 @@ class AppBannersNotifier extends StateNotifier<AsyncValue<List<PromoBanner>>> {
   }
 
   void _initRealTimeListener() {
-    // Initial load from cache or server
+    // Initial load from cache or RTDB
     _service.fetchBanners().then((banners) {
       if (mounted) {
         state = AsyncValue.data(banners);
@@ -172,7 +178,7 @@ class AppBannersNotifier extends StateNotifier<AsyncValue<List<PromoBanner>>> {
 
     // Setup Realtime Database Stream Listener for Banners
     try {
-      _subscription = FirebaseDatabase.instance.ref('banners').onValue.listen((event) {
+      _subscription = _database.ref('banners').onValue.listen((event) {
         if (!event.snapshot.exists) return;
         
         final rawVal = event.snapshot.value;
@@ -193,7 +199,7 @@ class AppBannersNotifier extends StateNotifier<AsyncValue<List<PromoBanner>>> {
 
         // Cache it locally in SharedPreferences asynchronously
         SharedPreferences.getInstance().then((prefs) {
-          prefs.setString('meetly_cached_banners', json.encode(rawList));
+          prefs.setString(SyncService._bannersCacheKey, json.encode(rawList));
         });
       });
     } catch (e) {
@@ -212,99 +218,18 @@ class AppBannersNotifier extends StateNotifier<AsyncValue<List<PromoBanner>>> {
 
 class SyncService {
   static const String _cacheKey = 'meetly_cached_settings';
-  static const String _serverUrlCacheKey = 'meetly_cached_server_url';
   static const String _bannersCacheKey = 'meetly_cached_banners';
 
-  // Getter for standard hardcoded default server URL
-  String get defaultServerUrl {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000';
-    }
-    return 'http://localhost:5000';
-  }
-
-  // Resolves localhost strings for Android Emulator compatibility
-  String _resolveUrl(String url) {
-    if (defaultTargetPlatform == TargetPlatform.android && url.contains('localhost')) {
-      return url.replaceAll('localhost', '10.0.2.2');
-    }
-    return url;
-  }
-
-  // Dynamic URL Fetching System from Firebase Realtime Database
-  Future<String> fetchDynamicServerUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Step 1: Attempt to retrieve from Firebase RTDB path 'server_url'
-    try {
-      final dbRef = FirebaseDatabase.instance.ref('server_url');
-      final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
-      if (snapshot.exists) {
-        final url = snapshot.value.toString();
-        await prefs.setString(_serverUrlCacheKey, url);
-        if (kDebugMode) {
-          print("SyncService: Retrieved dynamic server URL from Firebase RTDB: $url");
-        }
-        return _resolveUrl(url);
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print("SyncService: Firebase server_url fetch failed/offline ($e).");
-      }
-    }
-
-    // Step 2: Fallback to local SharedPreferences cache
-    final cachedUrl = prefs.getString(_serverUrlCacheKey);
-    if (cachedUrl != null && cachedUrl.isNotEmpty) {
-      if (kDebugMode) {
-        print("SyncService: Using cached server URL: $cachedUrl");
-      }
-      return _resolveUrl(cachedUrl);
-    }
-
-    // Step 3: Fallback to default local server configuration
-    final fallbackUrl = defaultServerUrl;
-    if (kDebugMode) {
-      print("SyncService: Falling back to default URL: $fallbackUrl");
-    }
-    return fallbackUrl;
-  }
-
-  // Fetch multiple banners - Offline-first Sync Algorithm
+  // Fetch multiple banners - Offline-first Sync Algorithm directly via Firebase RTDB
   Future<List<PromoBanner>> fetchBanners() async {
     final prefs = await SharedPreferences.getInstance();
-    final activeServerUrl = await fetchDynamicServerUrl();
 
-    // --- STEP 1: Attempt connection to Node.js local admin server ---
+    // --- STEP 1: Fetch directly from Firebase Realtime Database ---
     try {
       if (kDebugMode) {
-        print("SyncService: Querying banners from Node.js server at $activeServerUrl/api/banners...");
+        print("SyncService: Fetching banners from Firebase Realtime Database...");
       }
-
-      final client = HttpClientHelper();
-      final responseText = await client.get('$activeServerUrl/api/banners').timeout(const Duration(seconds: 2));
-
-      final List<dynamic> rawList = json.decode(responseText);
-      final List<PromoBanner> banners = rawList
-          .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
-          .toList();
-
-      // Cache locally
-      await prefs.setString(_bannersCacheKey, responseText);
-      if (kDebugMode) {
-        print("SyncService: Node.js banners sync successful. Cached locally.");
-      }
-      return banners;
-    } catch (e) {
-      if (kDebugMode) {
-        print("SyncService: Node.js server offline for banners. Switching to Firebase RTDB...");
-      }
-    }
-
-    // --- STEP 2: Fallback to Firebase Realtime Database backup ---
-    try {
-      final dbRef = FirebaseDatabase.instance.ref('banners');
+      final dbRef = _database.ref('banners');
       final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
 
       if (snapshot.exists) {
@@ -322,18 +247,15 @@ class SyncService {
 
         // Cache locally
         await prefs.setString(_bannersCacheKey, json.encode(rawList));
-        if (kDebugMode) {
-          print("SyncService: Firebase banners sync successful. Cached locally.");
-        }
         return banners;
       }
     } catch (e) {
       if (kDebugMode) {
-        print("SyncService: Firebase RTDB offline/failed for banners ($e).");
+        print("SyncService: Firebase RTDB offline/failed for banners ($e). Loading from cache...");
       }
     }
 
-    // --- STEP 3: Load cached banners from SharedPreferences ---
+    // --- STEP 2: Load cached banners from SharedPreferences ---
     final cachedText = prefs.getString(_bannersCacheKey);
     if (cachedText != null && cachedText.isNotEmpty) {
       try {
@@ -348,7 +270,7 @@ class SyncService {
       }
     }
 
-    // --- STEP 4: Default offline banners fallback ---
+    // --- STEP 3: Default offline banners fallback ---
     return [
       PromoBanner(
         id: 'default_1',
@@ -360,80 +282,39 @@ class SyncService {
     ];
   }
 
-  // Primary offline-first fetch sync algorithm (legacy settings support)
+  // Primary offline-first fetch sync algorithm directly via Firebase RTDB
   Future<AppSyncSettings> fetchSyncSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Resolve dynamic server URL first
-    final activeServerUrl = await fetchDynamicServerUrl();
-    
-    // --- STEP 1: Attempt connection to Node.js local admin server ---
+    // --- STEP 1: Fetch directly from Firebase Realtime Database ---
     try {
       if (kDebugMode) {
-        print("SyncService: Querying primary Node.js server at $activeServerUrl/api/settings...");
+        print("SyncService: Fetching settings from Firebase Realtime Database...");
       }
-      
-      final client = HttpClientHelper();
-      final responseText = await client.get('$activeServerUrl/api/settings').timeout(const Duration(seconds: 2));
-      
-      final Map<String, dynamic> data = json.decode(responseText);
-      
-      // Save successfully to local SharedPreferences cache
-      await prefs.setString(_cacheKey, responseText);
-      if (kDebugMode) {
-        print("SyncService: Node.js sync successful. Cached settings locally.");
-      }
-      
-      return AppSyncSettings.fromMap(data, 'nodejs');
-    } catch (e) {
-      if (kDebugMode) {
-        print("SyncService: Node.js server went offline or returned error ($e).");
-      }
-    }
-
-    // --- STEP 2: Fallback to Firebase Realtime Database backup ---
-    try {
-      if (kDebugMode) {
-        print("SyncService: Fetching backup settings from Firebase Realtime Database...");
-      }
-      
-      final dbRef = FirebaseDatabase.instance.ref('settings');
+      final dbRef = _database.ref('settings');
       final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
       
       if (snapshot.exists) {
         final Map<Object?, Object?> rawVal = snapshot.value as Map<Object?, Object?>;
-        // Convert to Map<String, dynamic>
         final Map<String, dynamic> data = {};
         rawVal.forEach((key, value) {
           data[key.toString()] = value;
         });
         
-        // Cache to local SharedPreferences
         await prefs.setString(_cacheKey, json.encode(data));
-        if (kDebugMode) {
-          print("SyncService: Firebase sync successful. Cached backup settings locally.");
-        }
-        
         return AppSyncSettings.fromMap(data, 'firebase');
-      } else {
-        if (kDebugMode) {
-          print("SyncService: Firebase database is empty/settings path not found.");
-        }
       }
     } catch (e) {
       if (kDebugMode) {
-        print("SyncService: Firebase Realtime Database went offline or returned error ($e).");
+        print("SyncService: Firebase Realtime Database offline or returned error ($e).");
       }
     }
 
-    // --- STEP 3: Load cached settings from SharedPreferences ---
+    // --- STEP 2: Load cached settings from SharedPreferences ---
     final cachedDataText = prefs.getString(_cacheKey);
     if (cachedDataText != null) {
       try {
         final Map<String, dynamic> data = json.decode(cachedDataText);
-        if (kDebugMode) {
-          print("SyncService: Complete offline recovery. Loaded settings from SharedPreferences cache.");
-        }
         return AppSyncSettings.fromMap(data, 'cache');
       } catch (e) {
         if (kDebugMode) {
@@ -442,30 +323,6 @@ class SyncService {
       }
     }
 
-    // --- STEP 4: Final offline assets fallback ---
-    if (kDebugMode) {
-      print("SyncService: No cached settings found. Falling back to default offline configuration.");
-    }
     return AppSyncSettings.defaultOffline();
-  }
-}
-
-// Simple Helper to handle standard HTTP GET client request using dart:io
-class HttpClientHelper {
-  Future<String> get(String urlString) async {
-    final uri = Uri.parse(urlString);
-    final httpClient = HttpClient();
-    try {
-      final request = await httpClient.getUrl(uri);
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        return responseBody;
-      } else {
-        throw Exception("Server returned status: ${response.statusCode}");
-      }
-    } finally {
-      httpClient.close();
-    }
   }
 }
