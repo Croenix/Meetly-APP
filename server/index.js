@@ -3,6 +3,39 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK with Resilient Fallbacks
+let db;
+try {
+  const serviceAccountPath = path.join(__dirname, 'service-account.json');
+  if (fs.existsSync(serviceAccountPath)) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccountPath),
+      databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app'
+    });
+    db = admin.database();
+    console.log("Firebase Admin SDK: Initialized with local service-account.json");
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app'
+    });
+    db = admin.database();
+    console.log("Firebase Admin SDK: Initialized with Application Default Credentials");
+  } else {
+    console.warn("Firebase Admin SDK: service-account.json and GOOGLE_APPLICATION_CREDENTIALS not found.");
+    console.warn("Initializing Admin SDK without explicit auth (relying on open database rules)...");
+    admin.initializeApp({
+      databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app'
+    });
+    db = admin.database();
+    console.log("Firebase Admin SDK: Initialized without explicit credential (open rules)");
+  }
+} catch (err) {
+  console.warn("Firebase Admin SDK Warning: Failed to initialize Admin SDK:", err.message);
+  console.warn("Continuing... Server will fallback to REST fetch for Firebase RTDB sync operations.");
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -219,17 +252,41 @@ function writeJsonFile(filePath, data) {
   }
 }
 
-// Firebase RTDB Sync Helper
-async function syncToFirebase(url, data) {
+// Firebase RTDB Sync Helper using Firebase Admin SDK with REST API Fallback
+async function syncToFirebase(pathOrUrl, data) {
+  let pathKey = pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/([^\/]+)\.json/);
+    if (match) {
+      pathKey = match[1];
+    }
+  }
+
+  // Use Firebase Admin SDK if active
+  if (db) {
+    try {
+      await db.ref(pathKey).set(data);
+      console.log(`Firebase Admin SDK: Successfully synced "${pathKey}" to database.`);
+      return true;
+    } catch (err) {
+      console.error(`Firebase Admin SDK error syncing "${pathKey}":`, err.message);
+    }
+  }
+
+  // REST API Fallback (useful if credentials are not configured yet)
   try {
+    const url = `https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/${pathKey}.json`;
     const response = await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+    if (response.ok) {
+      console.log(`REST Fallback: Successfully synced "${pathKey}" to database.`);
+    }
     return response.ok;
   } catch (err) {
-    console.error(`Firebase Sync error for ${url}:`, err);
+    console.error(`REST Fallback error syncing "${pathKey}":`, err.message);
     return false;
   }
 }
@@ -349,7 +406,7 @@ app.get('/api/providers/:id', (req, res) => {
   }
 });
 
-app.post('/api/providers', (req, res) => {
+app.post('/api/providers', async (req, res) => {
   const providers = readJsonFile(PROVIDERS_FILE, defaultProviders);
   const updatedProvider = req.body;
   if (!updatedProvider || !updatedProvider.id) {
@@ -363,7 +420,11 @@ app.post('/api/providers', (req, res) => {
     providers.push(updatedProvider);
   }
   writeJsonFile(PROVIDERS_FILE, providers);
-  res.json({ message: "Provider profile updated", provider: updatedProvider });
+
+  // Sync providers database to Firebase RTDB in real-time
+  const synced = await syncToFirebase('providers', providers);
+  
+  res.json({ message: "Provider profile updated", provider: updatedProvider, firebaseSynced: synced });
 });
 
 // --- PUBLISH SERVER API URL TO FIREBASE ON STARTUP ---
@@ -372,10 +433,17 @@ app.listen(PORT, async () => {
   console.log(`Meetly Admin Server running on ${hostUrl}`);
   
   console.log("Publishing server URL to Firebase Realtime Database...");
-  const published = await syncToFirebase(FIREBASE_SERVER_URL, hostUrl);
+  const published = await syncToFirebase('server_url', hostUrl);
   if (published) {
     console.log(`Successfully published server URL to Firebase RTDB.`);
   } else {
     console.warn("Failed to publish server URL to Firebase RTDB on startup.");
   }
+
+  // Pre-seed all nodes to Firebase RTDB on startup in real-time
+  console.log("Syncing database files to Firebase RTDB nodes...");
+  await syncToFirebase('settings', readJsonFile(SETTINGS_FILE, defaultSettings));
+  await syncToFirebase('categories', readJsonFile(CATEGORIES_FILE, defaultCategories));
+  await syncToFirebase('providers', readJsonFile(PROVIDERS_FILE, defaultProviders));
+  await syncToFirebase('banners', readJsonFile(BANNERS_FILE, defaultBanners));
 });

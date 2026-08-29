@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -90,19 +91,56 @@ final appSettingsStateProvider = StateNotifierProvider<AppSettingsNotifier, Asyn
 
 class AppSettingsNotifier extends StateNotifier<AsyncValue<AppSyncSettings>> {
   final SyncService _service;
+  StreamSubscription? _subscription;
 
   AppSettingsNotifier(this._service) : super(const AsyncValue.loading()) {
-    loadSettings();
+    _initRealTimeListener();
   }
 
-  Future<void> loadSettings() async {
-    state = const AsyncValue.loading();
+  void _initRealTimeListener() {
+    // Initial fetch
+    _service.fetchSyncSettings().then((settings) {
+      if (mounted) {
+        state = AsyncValue.data(settings);
+      }
+    }).catchError((e, stack) {
+      if (mounted) {
+        state = AsyncValue.error(e, stack);
+      }
+    });
+
+    // Real-Time Database listener binding
     try {
-      final settings = await _service.fetchSyncSettings();
-      state = AsyncValue.data(settings);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      _subscription = FirebaseDatabase.instance.ref('settings').onValue.listen((event) {
+        if (!event.snapshot.exists) return;
+        
+        final rawVal = event.snapshot.value as Map<dynamic, dynamic>;
+        final converted = <String, dynamic>{};
+        rawVal.forEach((key, value) {
+          converted[key.toString()] = value;
+        });
+
+        final settings = AppSyncSettings.fromMap(converted, 'firebase');
+        if (mounted) {
+          state = AsyncValue.data(settings);
+        }
+
+        // Cache locally in SharedPreferences asynchronously
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('meetly_cached_settings', json.encode(converted));
+        });
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Failed to bind settings real-time stream listener: $e");
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }
 
@@ -114,19 +152,61 @@ final appBannersStateProvider = StateNotifierProvider<AppBannersNotifier, AsyncV
 
 class AppBannersNotifier extends StateNotifier<AsyncValue<List<PromoBanner>>> {
   final SyncService _service;
+  StreamSubscription? _subscription;
 
   AppBannersNotifier(this._service) : super(const AsyncValue.loading()) {
-    loadBanners();
+    _initRealTimeListener();
   }
 
-  Future<void> loadBanners() async {
-    state = const AsyncValue.loading();
+  void _initRealTimeListener() {
+    // Initial load from cache or server
+    _service.fetchBanners().then((banners) {
+      if (mounted) {
+        state = AsyncValue.data(banners);
+      }
+    }).catchError((e, stack) {
+      if (mounted) {
+        state = AsyncValue.error(e, stack);
+      }
+    });
+
+    // Setup Realtime Database Stream Listener for Banners
     try {
-      final banners = await _service.fetchBanners();
-      state = AsyncValue.data(banners);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      _subscription = FirebaseDatabase.instance.ref('banners').onValue.listen((event) {
+        if (!event.snapshot.exists) return;
+        
+        final rawVal = event.snapshot.value;
+        List<dynamic> rawList = [];
+        if (rawVal is List) {
+          rawList = rawVal;
+        } else if (rawVal is Map) {
+          rawList = rawVal.values.toList();
+        }
+
+        final banners = rawList
+            .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+
+        if (mounted) {
+          state = AsyncValue.data(banners);
+        }
+
+        // Cache it locally in SharedPreferences asynchronously
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('meetly_cached_banners', json.encode(rawList));
+        });
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Failed to bind banners real-time stream listener: $e");
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }
 

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/database/local_database.dart';
 
@@ -32,37 +33,10 @@ class SyncedCategoryRepository implements CategoryRepository {
 
   @override
   Future<List<String>> getCategories() async {
-    final serverUrl = await _syncService.fetchDynamicServerUrl();
-    final client = HttpClientHelper();
-    
-    // Proactively attempt to sync any pending queue operations first
-    await syncPendingQueue();
-
-    try {
-      if (kDebugMode) {
-        print("CategoryRepo: Querying categories from server: $serverUrl/api/categories");
-      }
-      
-      final responseText = await client.get('$serverUrl/api/categories').timeout(const Duration(seconds: 2));
-      final List<dynamic> rawList = json.decode(responseText);
-      final List<String> categories = rawList.map((item) => item.toString()).toList();
-      
-      // Update local storage cache
-      await HiveLocalDatabase.instance.saveStringList(_dbKey, categories);
-      return categories;
-    } catch (e) {
-      if (kDebugMode) {
-        print("CategoryRepo: Server offline ($e). Loading from local database...");
-      }
-    }
-
-    // Fallback: Read from local HiveLocalDatabase
     final localList = await HiveLocalDatabase.instance.getStringList(_dbKey);
     if (localList != null) {
       return localList;
     }
-
-    // Secondary Fallback: default seeded mock list
     return List.from(_defaultCategories);
   }
 
@@ -238,7 +212,42 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return SyncedCategoryRepository(syncService);
 });
 
-final categoriesListProvider = FutureProvider<List<String>>((ref) async {
-  final repo = ref.watch(categoryRepositoryProvider);
-  return repo.getCategories();
+// StreamProvider listening directly to Realtime Database /categories node
+final categoriesListProvider = StreamProvider<List<String>>((ref) {
+  try {
+    return FirebaseDatabase.instance.ref('categories').onValue.map((event) {
+      final rawVal = event.snapshot.value;
+      List<String> list = [];
+      if (rawVal is List) {
+        list = rawVal.map((item) => item.toString()).toList();
+      } else if (rawVal is Map) {
+        list = rawVal.values.map((item) => item.toString()).toList();
+      }
+      
+      if (list.isNotEmpty) {
+        // Cache to local SQLite/SharedPreferences asynchronously
+        HiveLocalDatabase.instance.saveStringList('categories', list);
+      }
+      return list;
+    });
+  } catch (e) {
+    if (kDebugMode) {
+      print("CategoryRepo Stream: Error connecting to Firebase ($e). Falling back to local cache.");
+    }
+    // Fallback stream from local DB
+    return Stream.fromFuture(
+      HiveLocalDatabase.instance.getStringList('categories').then((localList) {
+        return localList ?? [
+          'Cleaning',
+          'Plumbing',
+          'Electrical',
+          'Appliance',
+          'Painting',
+          'Carpentry',
+          'Pest Control',
+          'Salon'
+        ];
+      })
+    );
+  }
 });

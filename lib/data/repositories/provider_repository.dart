@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../../core/models/service_provider.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/database/local_database.dart';
@@ -30,40 +31,11 @@ class SyncedProviderRepository implements ProviderRepository {
 
   @override
   Future<List<ServiceProvider>> getProviders() async {
-    final serverUrl = await _syncService.fetchDynamicServerUrl();
-    final client = HttpClientHelper();
-
-    // Sync pending offline operations before querying fresh state
-    await syncPendingQueue();
-
-    try {
-      if (kDebugMode) {
-        print("ProviderRepo: Querying providers from server: $serverUrl/api/providers");
-      }
-      final responseText = await client.get('$serverUrl/api/providers').timeout(const Duration(seconds: 2));
-      final List<dynamic> rawList = json.decode(responseText);
-      final List<ServiceProvider> providers = rawList
-          .map((item) => ServiceProvider.fromJson(item as Map<String, dynamic>))
-          .toList();
-
-      // Cache locally in local document store
-      final mapList = providers.map((p) => p.toJson()).toList();
-      await HiveLocalDatabase.instance.saveMapList(_dbKey, mapList);
-      
-      return providers;
-    } catch (e) {
-      if (kDebugMode) {
-        print("ProviderRepo: Server offline ($e). Loading from local database...");
-      }
-    }
-
-    // Fallback: Read from local storage
+    // Read from local database
     final localList = await HiveLocalDatabase.instance.getMapList(_dbKey);
     if (localList != null) {
       return localList.map((item) => ServiceProvider.fromJson(item)).toList();
     }
-
-    // Secondary Fallback: Seeded mock providers
     return List.from(mockProviders);
   }
 
@@ -205,7 +177,6 @@ class SyncedProviderRepository implements ProviderRepository {
           remainingTasks.add(task);
         }
       } else {
-        // Carry forward non-provider tasks in the shared queue
         remainingTasks.add(task);
       }
     }
@@ -227,10 +198,43 @@ final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
   return SyncedProviderRepository(syncService);
 });
 
-// Providers List Riverpod Provider
-final providersListProvider = FutureProvider<List<ServiceProvider>>((ref) async {
-  final repo = ref.watch(providerRepositoryProvider);
-  return repo.getProviders();
+// StreamProvider listening directly to Realtime Database /providers node
+final providersListProvider = StreamProvider<List<ServiceProvider>>((ref) {
+  try {
+    return FirebaseDatabase.instance.ref('providers').onValue.map((event) {
+      final rawVal = event.snapshot.value;
+      List<dynamic> rawList = [];
+      if (rawVal is List) {
+        rawList = rawVal;
+      } else if (rawVal is Map) {
+        rawList = rawVal.values.toList();
+      }
+
+      final list = rawList
+          .map((item) => ServiceProvider.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList();
+
+      if (list.isNotEmpty) {
+        // Cache to local SQLite/SharedPreferences asynchronously
+        final mapList = list.map((p) => p.toJson()).toList();
+        HiveLocalDatabase.instance.saveMapList('providers', mapList);
+      }
+      return list;
+    });
+  } catch (e) {
+    if (kDebugMode) {
+      print("ProviderRepo Stream: Error connecting to Firebase ($e). Falling back to local cache.");
+    }
+    // Fallback stream from local DB
+    return Stream.fromFuture(
+      HiveLocalDatabase.instance.getMapList('providers').then((localList) {
+        if (localList != null) {
+          return localList.map((item) => ServiceProvider.fromJson(item)).toList();
+        }
+        return List<ServiceProvider>.from(mockProviders);
+      })
+    );
+  }
 });
 
 // Single Provider Details Riverpod Provider
