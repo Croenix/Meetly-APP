@@ -14,6 +14,7 @@ import '../../data/repositories/message_repository.dart';
 import '../../data/repositories/provider_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../core/models/service_provider.dart';
+import '../../core/services/sync_service.dart';
 
 // StateProvider to reactively store the user selected city location
 final selectedLocationProvider = StateProvider<String?>((ref) => null);
@@ -367,113 +368,148 @@ class HomeScreen extends ConsumerWidget {
                         .slideY(begin: 0.1, end: 0, delay: 250.ms, curve: Curves.easeOutQuad),
                     AppSpacing.height24,
 
-                    // Interactive Promotion Banner
-                    Container(
-                      width: double.infinity,
-                      height: 155,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFEBF3FF), Color(0xFFD2E3FC)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 15,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            right: -20,
-                            top: -20,
-                            bottom: -20,
-                            child: AspectRatio(
-                              aspectRatio: 1,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withValues(alpha: 0.4),
-                                ),
-                              ),
+                    // Interactive Dynamic Promotion Banner (Offline-first Synced)
+                    ref.watch(appSettingsStateProvider).when(
+                      data: (settings) {
+                        final bannerImageUrl = settings.bannerImageUrl;
+                        
+                        return Container(
+                          width: double.infinity,
+                          height: 155,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFEBF3FF), Color(0xFFD2E3FC)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 15,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 6,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text(
-                                        'Get 30% Off Today!',
-                                        style: TextStyle(
-                                          color: Color(0xFF1A73E8),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      const Text(
-                                        'Professional Help\nfor Your Home',
-                                        style: TextStyle(
-                                          color: Color(0xFF202124),
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w900,
-                                          height: 1.2,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        height: 32,
-                                        child: ElevatedButton(
-                                          onPressed: () => context.push('/search'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF1A73E8),
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            elevation: 2,
-                                            shadowColor: const Color(0xFF1A73E8).withValues(alpha: 0.4),
-                                          ),
-                                          child: const Text(
-                                            'Book a Service',
-                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 4,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Image.asset(
-                                      'assets/images/3d_builder_banner.jpg',
-                                      fit: BoxFit.contain,
-                                      alignment: Alignment.centerRight,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: -20,
+                                top: -20,
+                                bottom: -20,
+                                child: AspectRatio(
+                                  aspectRatio: 1,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withValues(alpha: 0.4),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 6,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            settings.promoSubtitle,
+                                            style: const TextStyle(
+                                              color: Color(0xFF1A73E8),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            settings.promoTitle,
+                                            style: const TextStyle(
+                                              color: Color(0xFF202124),
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          SizedBox(
+                                            height: 32,
+                                            child: ElevatedButton(
+                                              onPressed: () => context.push('/search'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF1A73E8),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                elevation: 2,
+                                                shadowColor: const Color(0xFF1A73E8).withValues(alpha: 0.4),
+                                              ),
+                                              child: const Text(
+                                                'Book a Service',
+                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 4,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: bannerImageUrl.isNotEmpty
+                                            ? Image.network(
+                                                bannerImageUrl,
+                                                fit: BoxFit.contain,
+                                                alignment: Alignment.centerRight,
+                                                errorBuilder: (context, e, s) => Image.asset(
+                                                  'assets/images/3d_builder_banner.jpg',
+                                                  fit: BoxFit.contain,
+                                                  alignment: Alignment.centerRight,
+                                                ),
+                                              )
+                                            : Image.asset(
+                                                'assets/images/3d_builder_banner.jpg',
+                                                fit: BoxFit.contain,
+                                                alignment: Alignment.centerRight,
+                                              ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        )
+                            .animate()
+                            .fadeIn(delay: 350.ms, duration: 600.ms)
+                            .slideY(begin: 0.1, end: 0, delay: 350.ms, curve: Curves.easeOutQuad);
+                      },
+                      loading: () => Container(
+                        width: double.infinity,
+                        height: 155,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceDark : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Center(child: CircularProgressIndicator()),
                       ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 350.ms, duration: 600.ms)
-                        .slideY(begin: 0.1, end: 0, delay: 350.ms, curve: Curves.easeOutQuad),
+                      error: (err, _) => Container(
+                        width: double.infinity,
+                        height: 155,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceDark : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(child: Text("Sync Offline")),
+                      ),
+                    ),
                     AppSpacing.height32,
 
                     // Categories Title Header

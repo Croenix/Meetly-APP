@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meetly Admin Console</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #1A73E8;
+      --primary-hover: #1557B0;
+      --secondary: #FE845F;
+      --background: #F8FAFC;
+      --surface: #FFFFFF;
+      --text-main: #202124;
+      --text-muted: #5F6368;
+      --border: #DADCE0;
+      --success: #34A853;
+      --error: #EA4335;
+      --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05);
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--primary), #7C3AED);
+      color: white;
+      font-weight: 800;
+      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -1px;
+    }
+
+    .header-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .status-panel {
+      display: flex;
+      gap: 16px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background-color: var(--surface);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--border);
+    }
+
+    .status-indicator.online {
+      background-color: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-indicator.offline {
+      background-color: var(--error);
+      box-shadow: 0 0 8px var(--error);
+    }
+
+    main {
+      flex: 1;
+      padding: 32px;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background-color: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .chip {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      background-color: #E8F0FE;
+      color: var(--primary);
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background-color 0.2s;
+    }
+
+    .chip:hover {
+      background-color: #D2E3FC;
+    }
+
+    .btn-save {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.24);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-save:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-save:active {
+      transform: scale(0.98);
+    }
+
+    /* Live Preview Banner Section */
+    .preview-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .banner-preview {
+      width: 100%;
+      height: 160px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #EBF3FF, #D2E3FC);
+      box-shadow: var(--shadow-md);
+      padding: 20px;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+
+    .banner-circle {
+      position: absolute;
+      right: -20px;
+      top: -20px;
+      bottom: -20px;
+      width: 160px;
+      height: 160px;
+      background-color: rgba(255,255,255,0.4);
+      border-radius: 50%;
+    }
+
+    .banner-content {
+      flex: 6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .banner-subtitle {
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .banner-title {
+      color: #202124;
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .banner-btn {
+      background-color: var(--primary);
+      color: white;
+      padding: 6px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 20px;
+      width: fit-content;
+      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.2);
+    }
+
+    .banner-image {
+      flex: 4;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      z-index: 2;
+    }
+
+    .banner-img-element {
+      max-height: 120px;
+      max-width: 100%;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+
+    /* Preset Image List */
+    .image-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .image-preset-card {
+      border: 2px solid transparent;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      aspect-ratio: 1;
+      background-color: #E8F0FE;
+      position: relative;
+    }
+
+    .image-preset-card.active {
+      border-color: var(--primary);
+    }
+
+    .image-preset-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-preset-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 9px;
+      font-weight: 600;
+      text-align: center;
+      padding: 4px 0;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background-color: #323232;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast-icon {
+      color: var(--success);
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-logo">
+      <div class="logo-badge">M</div>
+      <div class="header-title">
+        <h1>Meetly Admin Console</h1>
+      </div>
+    </div>
+    <div class="status-panel">
+      <div class="status-badge">
+        <div class="status-indicator online" id="server-status"></div>
+        Server Status: Online
+      </div>
+      <div class="status-badge">
+        <div class="status-indicator online" id="firebase-status"></div>
+        Firebase RTDB: Connected
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: Settings Form -->
+    <div class="card">
+      <div class="card-title">App Banner Settings</div>
+      
+      <div class="form-group">
+        <label for="promo-subtitle">PROMO SUBTITLE</label>
+        <input type="text" id="promo-subtitle" placeholder="e.g. Save 30% Today!">
+        <div class="preset-chips">
+          <span class="chip" onclick="setSubtitle('SPECIAL OFFER')">SPECIAL OFFER</span>
+          <span class="chip" onclick="setSubtitle('GET 30% OFF TODAY!')">GET 30% OFF TODAY!</span>
+          <span class="chip" onclick="setSubtitle('LIMITED TIME OFFER')">LIMITED TIME OFFER</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="promo-title">PROMO TITLE</label>
+        <input type="text" id="promo-title" placeholder="e.g. Professional Help for Your Home">
+      </div>
+
+      <div class="form-group">
+        <label for="promo-discount">DISCOUNT LABEL</label>
+        <input type="text" id="promo-discount" placeholder="e.g. 30%">
+      </div>
+
+      <div class="form-group">
+        <label>BANNER ILLUSTRATION</label>
+        <div class="image-presets">
+          <div class="image-preset-card active" onclick="setPresetImage('', this)">
+            <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:var(--primary);">
+              Default 3D Asset
+            </div>
+            <div class="image-preset-label">Local Builder</div>
+          </div>
+          <div class="image-preset-card" onclick="setPresetImage('https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600', this)">
+            <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=150" alt="Plumber">
+            <div class="image-preset-label">Technician</div>
+          </div>
+          <div class="image-preset-card" onclick="setPresetImage('https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600', this)">
+            <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=150" alt="Cleaner">
+            <div class="image-preset-label">Cleaning Pro</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="custom-image-url">CUSTOM NETWORK IMAGE URL (OPTIONAL)</label>
+        <input type="text" id="custom-image-url" placeholder="Paste custom https://... image URL" oninput="updateCustomImage(this.value)">
+      </div>
+
+      <button class="btn-save" onclick="saveSettings()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Save & Sync to Firebase
+      </button>
+    </div>
+
+    <!-- Right: Live Preview Panel -->
+    <div class="preview-container">
+      <div class="card" style="position: sticky; top: 32px;">
+        <div class="card-title">Live Preview (Customer Mobile Dashboard)</div>
+        
+        <div class="banner-preview" id="preview-banner">
+          <div class="banner-circle"></div>
+          <div class="banner-content">
+            <div class="banner-subtitle" id="prev-subtitle">Save 30% Today!</div>
+            <div class="banner-title" id="prev-title">Exclusive discounts<br>on home services</div>
+            <div class="banner-btn">Book a Service</div>
+          </div>
+          <div class="banner-image">
+            <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300" class="banner-img-element" id="prev-img" alt="Illustration">
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+          <strong>Tip:</strong> The live preview dynamically renders changes to verify the color styling, text size fitting, and layout boundaries before pushing variables to the production database.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast-message">
+    <span class="toast-icon">✓</span>
+    <span id="toast-text">Settings synced to Firebase!</span>
+  </div>
+
+  <script>
+    let selectedImageUrl = '';
+    const defaultAssetPreviewUrl = '/3d_builder_banner.jpg'; // Serves local asset preview
+
+    // Fetch initial settings from server
+    async function loadInitialSettings() {
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const settings = await response.json();
+          document.getElementById('promo-subtitle').value = settings.promoSubtitle;
+          document.getElementById('promo-title').value = settings.promoTitle;
+          document.getElementById('promo-discount').value = settings.promoDiscount;
+          
+          if (settings.bannerImageUrl) {
+            document.getElementById('custom-image-url').value = settings.bannerImageUrl;
+            selectedImageUrl = settings.bannerImageUrl;
+            // Activate corresponding preset card if it matches, else clear active presets
+            clearActivePresetCards();
+            const presets = document.querySelectorAll('.image-preset-card');
+            presets.forEach(p => {
+              const onclickText = p.getAttribute('onclick') || '';
+              if (onclickText.includes(settings.bannerImageUrl)) {
+                p.classList.add('active');
+              }
+            });
+          } else {
+            selectedImageUrl = '';
+          }
+          
+          updateLivePreview();
+        }
+      } catch (err) {
+        console.error("Failed to load initial settings:", err);
+      }
+    }
+
+    // Set subtitle from preset chip
+    function setSubtitle(text) {
+      document.getElementById('promo-subtitle').value = text;
+      updateLivePreview();
+    }
+
+    // Clear active card states
+    function clearActivePresetCards() {
+      document.querySelectorAll('.image-preset-card').forEach(c => c.classList.remove('active'));
+    }
+
+    // Set image from preset thumbnails
+    function setPresetImage(url, element) {
+      clearActivePresetCards();
+      element.classList.add('active');
+      selectedImageUrl = url;
+      document.getElementById('custom-image-url').value = url;
+      updateLivePreview();
+    }
+
+    // Update preset matching when custom input is edited
+    function updateCustomImage(url) {
+      selectedImageUrl = url;
+      clearActivePresetCards();
+      // Match with presets
+      if (!url) {
+        document.querySelectorAll('.image-preset-card')[0].classList.add('active');
+      } else {
+        document.querySelectorAll('.image-preset-card').forEach(p => {
+          const onclickText = p.getAttribute('onclick') || '';
+          if (onclickText.includes(url)) {
+            p.classList.add('active');
+          }
+        });
+      }
+      updateLivePreview();
+    }
+
+    // Listen to form input changes to update visual preview in real time
+    document.getElementById('promo-subtitle').addEventListener('input', updateLivePreview);
+    document.getElementById('promo-title').addEventListener('input', updateLivePreview);
+
+    function updateLivePreview() {
+      const subtitle = document.getElementById('promo-subtitle').value || 'Save 30% Today!';
+      const title = document.getElementById('promo-title').value || 'Exclusive discounts\non home services';
+      
+      document.getElementById('prev-subtitle').innerText = subtitle;
+      // Convert newlines to br
+      document.getElementById('prev-title').innerHTML = title.replace(/\n/g, '<br>');
+      
+      const imgElement = document.getElementById('prev-img');
+      if (selectedImageUrl) {
+        imgElement.src = selectedImageUrl;
+        imgElement.style.display = 'block';
+      } else {
+        // Fallback placeholder during preview
+        imgElement.src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300';
+      }
+    }
+
+    // Save and sync Settings
+    async function saveSettings() {
+      const subtitle = document.getElementById('promo-subtitle').value;
+      const title = document.getElementById('promo-title').value;
+      const discount = document.getElementById('promo-discount').value;
+      
+      const payload = {
+        promoSubtitle: subtitle,
+        promoTitle: title,
+        promoDiscount: discount,
+        bannerImageUrl: selectedImageUrl
+      };
+
+      try {
+        const response = await fetch('/api/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          showToast("Settings saved and synced to Firebase!");
+          
+          const firebaseIndicator = document.getElementById('firebase-status');
+          if (result.firebaseSync && result.firebaseSync.success) {
+            firebaseIndicator.classList.add('online');
+            firebaseIndicator.classList.remove('offline');
+          } else {
+            firebaseIndicator.classList.remove('online');
+            firebaseIndicator.classList.add('offline');
+            showToast("Warning: Firebase Database is offline/failed to sync.");
+          }
+        } else {
+          showToast("Error: Failed to save settings to admin server.");
+        }
+      } catch (err) {
+        showToast("Error: Server is offline.");
+        console.error(err);
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast-message');
+      document.getElementById('toast-text').innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Load initial settings
+    loadInitialSettings();
+  </script>
+</body>
+</html>

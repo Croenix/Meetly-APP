@@ -48,6 +48,7 @@ class DefaultFirebaseOptions {
     authDomain: 'meetly-fea92.firebaseapp.com',
     storageBucket: 'meetly-fea92.firebasestorage.app',
     measurementId: 'G-KBK8JKN0N1',
+    databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -56,6 +57,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '47611700680',
     projectId: 'meetly-fea92',
     storageBucket: 'meetly-fea92.firebasestorage.app',
+    databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -65,6 +67,7 @@ class DefaultFirebaseOptions {
     projectId: 'meetly-fea92',
     storageBucket: 'meetly-fea92.firebasestorage.app',
     iosBundleId: 'com.meetly.meetly',
+    databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -74,6 +77,7 @@ class DefaultFirebaseOptions {
     projectId: 'meetly-fea92',
     storageBucket: 'meetly-fea92.firebasestorage.app',
     iosBundleId: 'com.meetly.meetly',
+    databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -84,5 +88,6 @@ class DefaultFirebaseOptions {
     authDomain: 'meetly-fea92.firebaseapp.com',
     storageBucket: 'meetly-fea92.firebasestorage.app',
     measurementId: 'G-KLSG2VMQ2B',
+    databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 }

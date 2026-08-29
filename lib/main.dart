@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'app/app.dart';
 
-void main() {
-  // Ensure Flutter engine bindings are loaded before loading shared preferences
+void main() async {
+  // Ensure Flutter engine bindings are loaded
   WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase initialization skipped/failed: $e");
+  }
   
   runApp(
     const ProviderScope(
