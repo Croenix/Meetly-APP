@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.meetly.meetly"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

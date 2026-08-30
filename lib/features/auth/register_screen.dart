@@ -7,6 +7,7 @@ import '../../app/theme/app_dimensions.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../core/models/app_user.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../core/services/location_service.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -25,6 +26,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String _selectedLocation = 'Kochi';
   UserRole _selectedRole = UserRole.customer;
   bool _obscurePassword = true;
+  bool _isFetchingGps = false;
 
   final List<String> _locations = ['Kochi', 'Kottayam', 'Alappuzha', 'Thiruvalla', 'Changanassery'];
 
@@ -166,26 +168,100 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             AppSpacing.height16,
 
-            // Location Selector Dropdown
-            DropdownButtonFormField<String>(
-              initialValue: _selectedLocation,
-              decoration: const InputDecoration(
-                labelText: 'Location / City',
-                prefixIcon: Icon(Icons.location_on_outlined),
-              ),
-              items: _locations.map((loc) {
-                return DropdownMenuItem<String>(
-                  value: loc,
-                  child: Text(loc),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _selectedLocation = val;
-                  });
-                }
-              },
+            // Location Selector Dropdown with GPS Auto-detect
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey(_selectedLocation),
+                    initialValue: _selectedLocation,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Location / City',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
+                    items: (_locations.contains(_selectedLocation)
+                            ? _locations
+                            : [_selectedLocation, ..._locations])
+                        .map((loc) {
+                      return DropdownMenuItem<String>(
+                        value: loc,
+                        child: Text(
+                          loc,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _selectedLocation = val;
+                        });
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Tooltip(
+                    message: 'Auto-detect GPS Location & Pincode',
+                    child: InkWell(
+                      onTap: _isFetchingGps
+                          ? null
+                          : () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              setState(() {
+                                _isFetchingGps = true;
+                              });
+                              final locService = ref.read(locationServiceProvider);
+                              final result = await locService.fetchCurrentLocation();
+                              if (mounted) {
+                                setState(() {
+                                  _isFetchingGps = false;
+                                  _selectedLocation = result.formattedAddress;
+                                });
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('GPS Location: ${result.formattedAddress}'),
+                                    duration: const Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 54,
+                        width: 54,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Center(
+                          child: _isFetchingGps
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.my_location,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             AppSpacing.height16,
 

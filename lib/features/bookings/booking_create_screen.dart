@@ -13,6 +13,7 @@ import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/booking_repository.dart';
+import '../../core/services/location_service.dart';
 
 class BookingCreateScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> bookingArgs;
@@ -38,6 +39,7 @@ class _BookingCreateScreenState extends ConsumerState<BookingCreateScreen> {
   String _selectedTime = '10:00 AM';
   
   bool _isSuccess = false;
+  bool _isFetchingGps = false;
   late String _createdBookingId;
 
   final List<String> _timeSlots = [
@@ -301,6 +303,42 @@ class _BookingCreateScreenState extends ConsumerState<BookingCreateScreen> {
                             label: 'Full Service Address',
                             hintText: 'Enter street, house name, area, and city',
                             prefixIcon: Icons.location_on_outlined,
+                            suffixIcon: IconButton(
+                              tooltip: 'Auto-detect GPS Location & Pincode',
+                              icon: _isFetchingGps
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : Icon(
+                                      Icons.my_location,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                              onPressed: _isFetchingGps
+                                  ? null
+                                  : () async {
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      setState(() {
+                                        _isFetchingGps = true;
+                                      });
+                                      final locService = ref.read(locationServiceProvider);
+                                      final result = await locService.fetchCurrentLocation();
+                                      if (mounted) {
+                                        setState(() {
+                                          _isFetchingGps = false;
+                                          _locationController.text = result.formattedAddress;
+                                        });
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text('Address set to: ${result.formattedAddress}'),
+                                            behavior: SnackBarBehavior.floating,
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    },
+                            ),
                           ),
                           AppSpacing.height16,
                           AppTextField(
