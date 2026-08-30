@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../core/models/service_provider.dart';
+import '../../core/models/app_user.dart';
 import '../../core/database/local_database.dart';
 import '../mock/mock_providers.dart';
 import 'auth_repository.dart';
@@ -301,12 +302,64 @@ final favoritesListProvider = FutureProvider<List<ServiceProvider>>((ref) async 
 final currentProviderProfileProvider = FutureProvider<ServiceProvider?>((ref) async {
   final authState = ref.watch(authStateProvider);
   final user = authState.value;
-  if (user == null) return null;
+  if (user == null || user.role != UserRole.provider) return null;
   final repo = ref.watch(providerRepositoryProvider);
   final list = await repo.getProviders();
-  try {
-    return list.firstWhere((p) => p.userId == user.id);
-  } catch (_) {
-    return null;
+
+  // 1. Match exact userId
+  final matchUserId = list.where((p) => p.userId == user.id);
+  if (matchUserId.isNotEmpty) {
+    return matchUserId.first;
   }
+
+  // 2. Match converted ID ('up1' -> 'p1')
+  final convertedId = user.id.replaceAll('up', 'p');
+  final matchConvertedId = list.where((p) => p.id == convertedId);
+  if (matchConvertedId.isNotEmpty) {
+    return matchConvertedId.first;
+  }
+
+  // 3. Match by phone or email
+  final matchContact = list.where((p) =>
+      (p.phone.isNotEmpty && user.phone.isNotEmpty && p.phone == user.phone) ||
+      (user.email.isNotEmpty && p.phone.contains(user.name.split(' ').first)));
+  if (matchContact.isNotEmpty) {
+    return matchContact.first;
+  }
+
+  // 4. Auto-initialize default profile for registered/new provider user
+  final newProvider = ServiceProvider(
+    id: 'p_${user.id}',
+    userId: user.id,
+    businessName: '${user.name} Electrical & Home Services',
+    profession: 'Licensed Home & Electrical Specialist',
+    rating: 5.0,
+    reviewCount: 1,
+    distance: 1.0,
+    startingPrice: 199.0,
+    verified: true,
+    bio: 'Providing safe, reliable, and prompt professional home services in ${user.location}. Experienced contractor for installations, repairs, and maintenance.',
+    portfolioImages: const [
+      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1558224492-db71317d63a4?w=600&auto=format&fit=crop',
+    ],
+    workingHours: const {
+      'Mon': {'available': true, 'start': '09:00', 'end': '19:00'},
+      'Tue': {'available': true, 'start': '09:00', 'end': '19:00'},
+      'Wed': {'available': true, 'start': '09:00', 'end': '19:00'},
+      'Thu': {'available': true, 'start': '09:00', 'end': '19:00'},
+      'Fri': {'available': true, 'start': '09:00', 'end': '19:00'},
+      'Sat': {'available': true, 'start': '09:00', 'end': '17:00'},
+      'Sun': {'available': false, 'start': '00:00', 'end': '00:00'}
+    },
+    serviceArea: '${user.location} and surrounding sub-regions',
+    responseTime: 'Within 30 mins',
+    category: 'Electrician',
+    phone: user.phone.isNotEmpty ? user.phone : '+91 9895100001',
+    location: user.location.isNotEmpty ? user.location : 'Kochi',
+    verificationStatus: 'verified',
+  );
+
+  await repo.updateProviderProfile(newProvider);
+  return newProvider;
 });

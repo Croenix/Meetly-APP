@@ -4,8 +4,8 @@ final List<ServiceProvider> mockProviders = [
   // 1. Electricians
   const ServiceProvider(
     id: 'p1',
-    userId: 'up2', // Rajesh K.R.
-    businessName: 'Rajesh Electrical Solutions',
+    userId: 'up1', // Arun Thomas
+    businessName: 'Arun Thomas Electrical Solutions',
     profession: 'Certified Industrial & Home Electrician',
     rating: 4.8,
     reviewCount: 142,

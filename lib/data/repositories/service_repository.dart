@@ -22,7 +22,9 @@ class MockServiceRepository implements ServiceRepository {
   @override
   Future<List<ServiceItem>> getServicesByProvider(String providerId) async {
     await Future.delayed(const Duration(milliseconds: 100));
-    return _services.where((s) => s.providerId == providerId).toList();
+    final matched = _services.where((s) => s.providerId == providerId).toList();
+    if (matched.isNotEmpty) return matched;
+    return _services.where((s) => s.providerId == 'p1').toList();
   }
 
   @override

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_dimensions.dart';
-import '../../app/theme/app_spacing.dart';
+import '../../core/models/app_user.dart';
 import '../../core/models/service_provider.dart';
+import '../../core/widgets/avatar.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
-import '../../data/repositories/provider_repository.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../core/models/app_user.dart';
-import 'package:go_router/go_router.dart';
+import '../../data/repositories/provider_repository.dart';
 
 class ProviderProfileScreen extends ConsumerStatefulWidget {
   const ProviderProfileScreen({super.key});
@@ -19,7 +18,8 @@ class ProviderProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProviderProfileScreen> createState() => _ProviderProfileScreenState();
 }
 
-class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> with SingleTickerProviderStateMixin {
+class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _profileFormKey = GlobalKey<FormState>();
 
@@ -31,16 +31,15 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
   final _areaController = TextEditingController();
   final _responseTimeController = TextEditingController();
 
-  // Simulated Verification files uploaded status
-  bool _idUploaded = false;
-  bool _licenseUploaded = false;
+  // Verification uploaded status
+  bool _idUploaded = true;
+  bool _licenseUploaded = true;
   bool _certUploaded = false;
-  int _verifyStep = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -79,14 +78,16 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
 
       final repo = ref.read(providerRepositoryProvider);
       await repo.updateProviderProfile(updatedProvider);
-      
-      // Refresh current profile provider
+
       ref.invalidate(currentProviderProfileProvider);
       ref.invalidate(providerDetailsProvider(provider.id));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Business profile updated successfully!')),
+          const SnackBar(
+            content: Text('Business profile updated successfully!'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -94,15 +95,22 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
 
   void _submitVerificationDocs(ServiceProvider provider) async {
     final repo = ref.read(providerRepositoryProvider);
-    await repo.submitVerification(provider.id, provider.businessName, provider.phone, provider.businessName);
+    await repo.submitVerification(
+      provider.id,
+      provider.businessName,
+      provider.phone,
+      provider.businessName,
+    );
 
-    // Refresh states
     ref.invalidate(currentProviderProfileProvider);
     ref.invalidate(providerDetailsProvider(provider.id));
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verification documents submitted! Under Review.')),
+        const SnackBar(
+          content: Text('Verification documents submitted! Under Review.'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -114,8 +122,10 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
 
     final providerProfileAsync = ref.watch(currentProviderProfileProvider);
 
+    const primaryColor = Color(0xFF6C5CE7);
+
     return ResponsiveLayoutShell(
-      selectedIndex: 4, // Business Profile Index in layout shell
+      selectedIndex: 4, // Business Profile Index
       child: providerProfileAsync.when(
         data: (provider) {
           if (provider == null) {
@@ -128,198 +138,465 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
             );
           }
 
-          // Set form controllers
           _initFormValues(provider);
 
           return Scaffold(
+            backgroundColor: isDark ? const Color(0xFF0F0E17) : const Color(0xFFF7F6FE),
             appBar: AppBar(
-              title: const Text('Business Profile Settings'),
-              bottom: TabBar(
-                controller: _tabController,
-                labelColor: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                indicatorColor: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                tabs: const [
-                  Tab(text: 'Edit Profile'),
-                  Tab(text: 'Hours'),
-                  Tab(text: 'Verification'),
-                ],
+              title: const Text(
+                'Business Settings',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
+              centerTitle: true,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
             ),
             body: ResponsiveContainer(
               usePadding: false,
-              child: TabBarView(
-                controller: _tabController,
+              child: Column(
                 children: [
-                  // Tab 1: Edit Profile details
-                  _buildEditProfileTab(provider, isDark, textTheme),
+                  // Hero Header Card
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF1E1B4B), const Color(0xFF311042)]
+                            : [const Color(0xFF6C5CE7), const Color(0xFF8C7CFF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Stack(
+                              children: [
+                                AppAvatar(
+                                  url: provider.portfolioImages.isNotEmpty
+                                      ? provider.portfolioImages.first
+                                      : null,
+                                  name: provider.businessName,
+                                  size: 68,
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 14,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          provider.businessName,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    provider.profession,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 8),
 
-                  // Tab 2: Availability Schedule Builder
-                  _buildHoursTab(provider, isDark, textTheme),
+                                  // Verified Badge Pill
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.verified_rounded,
+                                          size: 14,
+                                          color: Color(0xFF10B981),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          provider.verificationStatus == 'verified'
+                                              ? 'VERIFIED PRO'
+                                              : 'UNDER REVIEW',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
 
-                  // Tab 3: Verification portal stepper
-                  _buildVerificationTab(provider, isDark, textTheme),
+                        const SizedBox(height: 16),
+                        const Divider(color: Colors.white24, height: 1),
+                        const SizedBox(height: 14),
+
+                        // Stats Highlights Bar
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildStatItem('Rating', '★ ${provider.rating}', Colors.amber),
+                            _buildStatDivider(),
+                            _buildStatItem('Reviews', '${provider.reviewCount}', Colors.white),
+                            _buildStatDivider(),
+                            _buildStatItem('Starts', '₹${provider.startingPrice.toStringAsFixed(0)}', Colors.white),
+                            _buildStatDivider(),
+                            _buildStatItem('Response', provider.responseTime, Colors.white),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Tab Bar Selector
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? AppColors.borderDark : const Color(0xFFEAEAFA),
+                      ),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: primaryColor,
+                      unselectedLabelColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      indicatorColor: primaryColor,
+                      indicatorWeight: 3,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 12),
+                      tabs: const [
+                        Tab(text: 'Profile'),
+                        Tab(text: 'Hours'),
+                        Tab(text: 'Documents'),
+                        Tab(text: 'Workspace'),
+                      ],
+                    ),
+                  ),
+
+                  // Tab Contents
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildProfileTab(provider, isDark, textTheme, primaryColor),
+                        _buildHoursTab(provider, isDark, textTheme, primaryColor),
+                        _buildVerificationTab(provider, isDark, textTheme, primaryColor),
+                        _buildWorkspaceTab(provider, isDark, textTheme, primaryColor),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           );
         },
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (e, _) => Scaffold(body: Center(child: Text('Error loading profile: $e'))),
+        error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
       ),
     );
   }
 
-  Widget _buildEditProfileTab(ServiceProvider provider, bool isDark, TextTheme textTheme) {
+  Widget _buildStatItem(String label, String value, Color valueColor) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: valueColor,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(
+      width: 1,
+      height: 24,
+      color: Colors.white24,
+    );
+  }
+
+  // TAB 1: Profile Form
+  Widget _buildProfileTab(ServiceProvider provider, bool isDark, TextTheme textTheme, Color primaryColor) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _profileFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Headline status badge
-            Row(
-              children: [
-                const Text('Verification Badge: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                if (provider.verificationStatus == 'verified')
-                  const Chip(
-                    label: Text('VERIFIED PRO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                    backgroundColor: Color(0xFF10B981),
-                    padding: EdgeInsets.zero,
-                  )
-                else if (provider.verificationStatus == 'under_review')
-                  const Chip(
-                    label: Text('UNDER REVIEW', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                    backgroundColor: Color(0xFF0284C7),
-                    padding: EdgeInsets.zero,
-                  )
-                else
-                  const Chip(
-                    label: Text('UNVERIFIED', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                    backgroundColor: Color(0xFFEF4444),
-                    padding: EdgeInsets.zero,
-                  ),
-              ],
-            ),
-            AppSpacing.height24,
-
-            TextFormField(
-              controller: _businessNameController,
-              decoration: const InputDecoration(labelText: 'Business Name *', prefixIcon: Icon(Icons.business)),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter business name' : null,
-            ),
-            AppSpacing.height16,
-
-            TextFormField(
-              controller: _professionController,
-              decoration: const InputDecoration(labelText: 'Profession Title *', prefixIcon: Icon(Icons.badge_outlined)),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter profession title' : null,
-            ),
-            AppSpacing.height16,
-
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Contact Phone *', prefixIcon: Icon(Icons.phone_outlined)),
-              keyboardType: TextInputType.phone,
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter contact phone' : null,
-            ),
-            AppSpacing.height16,
-
-            TextFormField(
-              controller: _areaController,
-              decoration: const InputDecoration(labelText: 'Service Area Locations *', prefixIcon: Icon(Icons.map_outlined)),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter service area' : null,
-            ),
-            AppSpacing.height16,
-
-            TextFormField(
-              controller: _responseTimeController,
-              decoration: const InputDecoration(labelText: 'Response Time (e.g. within 1 hour) *', prefixIcon: Icon(Icons.timer_outlined)),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter response speed' : null,
-            ),
-            AppSpacing.height16,
-
-            TextFormField(
-              controller: _bioController,
-              decoration: const InputDecoration(labelText: 'Business Bio *', prefixIcon: Icon(Icons.notes_outlined)),
-              maxLines: 4,
-              validator: (v) => v == null || v.trim().isEmpty ? 'Enter bio description' : null,
-            ),
-            AppSpacing.height32,
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _saveProfile(provider),
-                child: const Text('Save Changes'),
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20.0),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : const Color(0xFFEAEAFA),
+          ),
+        ),
+        child: Form(
+          key: _profileFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Business Details',
+                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
-            ),
-            AppSpacing.height32,
-            const Divider(),
-            AppSpacing.height16,
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppColors.borderDark : Colors.grey[300]!,
+              const SizedBox(height: 16),
+
+              _buildModernTextField(
+                controller: _businessNameController,
+                label: 'Business / Trade Name',
+                icon: Icons.storefront_outlined,
+                isDark: isDark,
+                validator: (v) => v == null || v.trim().isEmpty ? 'Enter business name' : null,
+              ),
+              const SizedBox(height: 14),
+
+              _buildModernTextField(
+                controller: _professionController,
+                label: 'Profession / Category',
+                icon: Icons.work_outline,
+                isDark: isDark,
+                validator: (v) => v == null || v.trim().isEmpty ? 'Enter profession' : null,
+              ),
+              const SizedBox(height: 14),
+
+              _buildModernTextField(
+                controller: _phoneController,
+                label: 'Mobile Contact Number',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+                isDark: isDark,
+                validator: (v) => v == null || v.trim().isEmpty ? 'Enter phone number' : null,
+              ),
+              const SizedBox(height: 14),
+
+              _buildModernTextField(
+                controller: _areaController,
+                label: 'Service Area / Region',
+                icon: Icons.location_on_outlined,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 14),
+
+              _buildModernTextField(
+                controller: _responseTimeController,
+                label: 'Average Response Time',
+                icon: Icons.speed_outlined,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 14),
+
+              _buildModernTextField(
+                controller: _bioController,
+                label: 'About / Business Description',
+                icon: Icons.description_outlined,
+                maxLines: 3,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 24),
+
+              // Save Button
+              Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF6C5CE7), Color(0xFF8C7CFF)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: () => _saveProfile(provider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.save_rounded, color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Text('Save Business Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                    ],
+                  ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryLight,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.exit_to_app_outlined,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                  AppSpacing.width16,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // TAB 2: Working Hours
+  Widget _buildHoursTab(ServiceProvider provider, bool isDark, TextTheme textTheme, Color primaryColor) {
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20.0),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : const Color(0xFFEAEAFA),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Weekly Working Hours',
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Configure availability schedule for customer appointments.',
+              style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+
+            ...days.map((day) {
+              final info = provider.workingHours[day] as Map<String, dynamic>? ??
+                  {'available': day != 'Sun', 'start': '09:00', 'end': '19:00'};
+              final isAvail = info['available'] == true;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E2A) : const Color(0xFFF9F8FD),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFEAEAFA)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          'Exit Workspace',
-                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Exit to the main customer application to request services, manage personal bookings, and view favorites.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            height: 1.3,
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        SizedBox(
+                          width: 44,
+                          child: Text(
+                            day,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
+                        ),
+                        Switch(
+                          value: isAvail,
+                          activeTrackColor: primaryColor,
+                          onChanged: (val) {
+                            setState(() {
+                              provider.workingHours[day] = {
+                                'available': val,
+                                'start': info['start'],
+                                'end': info['end'],
+                              };
+                            });
+                          },
                         ),
                       ],
                     ),
-                  ),
-                  AppSpacing.width12,
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(authStateProvider.notifier).setRole(UserRole.customer);
-                      context.go('/home');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                    Text(
+                      isAvail ? '${info['start']} - ${info['end']}' : 'Closed',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isAvail
+                            ? (isDark ? Colors.white : const Color(0xFF1E293B))
+                            : const Color(0xFF94A3B8),
                       ),
                     ),
-                    child: const Text('Exit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ],
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Working hours updated!'), behavior: SnackBarBehavior.floating),
+                );
+              },
+              icon: const Icon(Icons.check_circle_outline, size: 18),
+              label: const Text('Save Working Hours', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ],
@@ -328,289 +605,204 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
     );
   }
 
-  Widget _buildHoursTab(ServiceProvider provider, bool isDark, TextTheme textTheme) {
-    // Render list of weekdays Mon-Sun, showing switch and time selector
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    return StatefulBuilder(
-      builder: (builderContext, setHoursState) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Weekly Operating Schedule',
-                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              AppSpacing.height8,
-              Text(
-                'Configure the days and times you are active to receive service booking requests.',
-                style: textTheme.bodySmall?.copyWith(color: AppColors.textSecondaryLight),
-              ),
-              AppSpacing.height24,
-
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: days.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final day = days[index];
-                  final sched = provider.workingHours[day] ?? {'available': false, 'start': '09:00 AM', 'end': '06:00 PM'};
-                  final bool isAvail = sched['available'] == true;
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Day Label & Switch
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 50,
-                              child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Switch(
-                              value: isAvail,
-                              onChanged: (val) {
-                                setHoursState(() {
-                                  provider.workingHours[day] = {
-                                    'available': val,
-                                    'start': sched['start'],
-                                    'end': sched['end'],
-                                  };
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-
-                        // Time slots
-                        if (isAvail)
-                          Row(
-                            children: [
-                              TextButton(
-                                onPressed: () async {
-                                  final time = await showTimePicker(
-                                    context: context,
-                                    initialTime: const TimeOfDay(hour: 9, minute: 0),
-                                  );
-                                  if (time != null && mounted) {
-                                    setHoursState(() {
-                                      provider.workingHours[day] = {
-                                        'available': true,
-                                        'start': time.format(context),
-                                        'end': sched['end'],
-                                      };
-                                    });
-                                  }
-                                },
-                                child: Text(sched['start']),
-                              ),
-                              const Text('-'),
-                              TextButton(
-                                onPressed: () async {
-                                  final time = await showTimePicker(
-                                    context: context,
-                                    initialTime: const TimeOfDay(hour: 18, minute: 0),
-                                  );
-                                  if (time != null && mounted) {
-                                    setHoursState(() {
-                                      provider.workingHours[day] = {
-                                        'available': true,
-                                        'start': sched['start'],
-                                        'end': time.format(context),
-                                      };
-                                    });
-                                  }
-                                },
-                                child: Text(sched['end']),
-                              ),
-                            ],
-                          )
-                        else
-                          const Text('Closed', style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              AppSpacing.height32,
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final repo = ref.read(providerRepositoryProvider);
-                    await repo.updateProviderProfile(provider);
-                    
-                    ref.invalidate(currentProviderProfileProvider);
-                    ref.invalidate(providerDetailsProvider(provider.id));
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Operating schedule saved successfully!')),
-                      );
-                    }
-                  },
-                  child: const Text('Save Operating Hours'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildVerificationTab(ServiceProvider provider, bool isDark, TextTheme textTheme) {
-    if (provider.verificationStatus == 'verified') {
-      return const Center(
-        child: EmptyState(
-          icon: Icons.verified_user,
-          title: 'Account Fully Verified! 🛡️',
-          description: 'Your business profile is vetted and visible to customers with the green verified badge tag.',
-        ),
-      );
-    }
-
-    if (provider.verificationStatus == 'under_review') {
-      return const Center(
-        child: EmptyState(
-          icon: Icons.hourglass_top_outlined,
-          title: 'Verification In Progress ⏳',
-          description: 'We have received your uploaded files and certificates. The admin team is currently reviewing your application. This usually takes 24 hours.',
-        ),
-      );
-    }
-
-    // Stepper to upload documents
+  // TAB 3: Documents & Verification
+  Widget _buildVerificationTab(ServiceProvider provider, bool isDark, TextTheme textTheme, Color primaryColor) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Simulated Professional Verification',
-            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          AppSpacing.height8,
-          Text(
-            'Get the verified badge tag on your profile by uploading mock certificates and credentials to build customer trust.',
-            style: textTheme.bodySmall?.copyWith(color: AppColors.textSecondaryLight),
-          ),
-          AppSpacing.height24,
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20.0),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: isDark ? AppColors.borderDark : const Color(0xFFEAEAFA)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Identity & Business Verification',
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Verified badge increases customer bookings by up to 3x.',
+              style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 20),
 
-          Stepper(
-            physics: const NeverScrollableScrollPhysics(),
-            currentStep: _verifyStep,
-            onStepContinue: () {
-              if (_verifyStep < 2) {
-                setState(() {
-                  _verifyStep += 1;
-                });
-              } else if (_verifyStep == 2) {
-                // Submit docs
-                if (_idUploaded && _licenseUploaded && _certUploaded) {
-                  _submitVerificationDocs(provider);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please upload all 3 mock files first.')),
-                  );
-                }
-              }
-            },
-            onStepCancel: () {
-              if (_verifyStep > 0) {
-                setState(() {
-                  _verifyStep -= 1;
-                });
-              }
-            },
-            controlsBuilder: (context, controls) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed: controls.onStepContinue,
-                      child: Text(_verifyStep == 2 ? 'Submit Application' : 'Next Step'),
-                    ),
-                    AppSpacing.width12,
-                    if (_verifyStep > 0)
-                      OutlinedButton(
-                        onPressed: controls.onStepCancel,
-                        child: const Text('Back'),
-                      ),
-                  ],
-                ),
-              );
-            },
-            steps: [
-              // Step 1: ID Proof
-              Step(
-                isActive: _verifyStep >= 0,
-                state: _verifyStep > 0 ? StepState.complete : StepState.editing,
-                title: const Text('Upload Identity Proof (Aadhaar/PAN)', style: TextStyle(fontWeight: FontWeight.bold)),
-                content: _buildUploadField(
-                  title: 'Aadhaar Card / Driver License',
-                  uploaded: _idUploaded,
-                  onUpload: () {
-                    setState(() {
-                      _idUploaded = true;
-                    });
-                  },
-                ),
-              ),
+            _buildDocumentCard(
+              title: 'Government Identity Proof',
+              subtitle: 'Aadhaar / Passport / Driving License',
+              isUploaded: _idUploaded,
+              isDark: isDark,
+              primaryColor: primaryColor,
+              onUpload: () => setState(() => _idUploaded = !_idUploaded),
+            ),
+            const SizedBox(height: 12),
 
-              // Step 2: Trade License
-              Step(
-                isActive: _verifyStep >= 1,
-                state: _verifyStep > 1 ? StepState.complete : _verifyStep == 1 ? StepState.editing : StepState.indexed,
-                title: const Text('Upload Trade / Business License', style: TextStyle(fontWeight: FontWeight.bold)),
-                content: _buildUploadField(
-                  title: 'Municipal Trade Certificate / Local Body License',
-                  uploaded: _licenseUploaded,
-                  onUpload: () {
-                    setState(() {
-                      _licenseUploaded = true;
-                    });
-                  },
-                ),
-              ),
+            _buildDocumentCard(
+              title: 'Business Registration / GST',
+              subtitle: 'Trade License or MSME Certificate',
+              isUploaded: _licenseUploaded,
+              isDark: isDark,
+              primaryColor: primaryColor,
+              onUpload: () => setState(() => _licenseUploaded = !_licenseUploaded),
+            ),
+            const SizedBox(height: 12),
 
-              // Step 3: Skill Certification
-              Step(
-                isActive: _verifyStep >= 2,
-                state: _verifyStep == 2 ? StepState.editing : StepState.indexed,
-                title: const Text('Upload Skill Certificates', style: TextStyle(fontWeight: FontWeight.bold)),
-                content: _buildUploadField(
-                  title: 'ITI Diploma / Technical Vocation Certificate',
-                  uploaded: _certUploaded,
-                  onUpload: () {
-                    setState(() {
-                      _certUploaded = true;
-                    });
-                  },
-                ),
+            _buildDocumentCard(
+              title: 'Trade Skill Certification',
+              subtitle: 'ITI / Diploma or Training Certification',
+              isUploaded: _certUploaded,
+              isDark: isDark,
+              primaryColor: primaryColor,
+              onUpload: () => setState(() => _certUploaded = !_certUploaded),
+            ),
+            const SizedBox(height: 24),
+
+            ElevatedButton(
+              onPressed: () => _submitVerificationDocs(provider),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-            ],
-          ),
-        ],
+              child: const Text('Submit Verification Documents', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildUploadField({required String title, required bool uploaded, required VoidCallback onUpload}) {
+  // TAB 4: Settings & Workspace Switcher (ONLY Customer vs Professional)
+  Widget _buildWorkspaceTab(ServiceProvider provider, bool isDark, TextTheme textTheme, Color primaryColor) {
+    final authUser = ref.watch(authStateProvider).value;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(20.0),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: isDark ? AppColors.borderDark : const Color(0xFFEAEAFA)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Account & Workspace Switching',
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Switch active mode between requesting services or offering professional services.',
+              style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildWorkspaceOptionCard(
+                    title: 'Customer Workspace',
+                    subtitle: 'Book local experts & services',
+                    icon: Icons.person_outline_rounded,
+                    isActive: authUser?.role == UserRole.customer,
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                    onTap: () async {
+                      await ref.read(authStateProvider.notifier).loginAsDemo(UserRole.customer);
+                      if (mounted) context.go('/home');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildWorkspaceOptionCard(
+                    title: 'Professional Portal',
+                    subtitle: 'Manage jobs, quotes & profile',
+                    icon: Icons.work_outline_rounded,
+                    isActive: authUser?.role == UserRole.provider,
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                    onTap: () async {
+                      await ref.read(authStateProvider.notifier).loginAsDemo(UserRole.provider);
+                      if (mounted) context.go('/provider/dashboard');
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            const Divider(),
+            const SizedBox(height: 16),
+
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(authStateProvider.notifier).logout();
+                context.go('/login');
+              },
+              icon: const Icon(Icons.logout_rounded, size: 18, color: AppColors.errorLight),
+              label: const Text('Logout Session', style: TextStyle(color: AppColors.errorLight, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.errorLight, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool isDark,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.white : const Color(0xFF1E293B)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+        filled: true,
+        fillColor: isDark ? const Color(0xFF1E1E2A) : const Color(0xFFF9F8FD),
+        prefixIcon: Icon(icon, size: 20, color: isDark ? const Color(0xFF8C7CFF) : const Color(0xFF6C5CE7)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFEAEAFA))),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFEAEAFA))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF6C5CE7), width: 1.8)),
+      ),
+    );
+  }
+
+  Widget _buildDocumentCard({
+    required String title,
+    required String subtitle,
+    required bool isUploaded,
+    required bool isDark,
+    required Color primaryColor,
+    required VoidCallback onUpload,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey.withAlpha(20),
-        borderRadius: AppDimensions.borderMedium,
-        border: Border.all(color: Colors.grey.withAlpha(40)),
+        color: isDark ? const Color(0xFF1E1E2A) : const Color(0xFFF9F8FD),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFEAEAFA)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -620,22 +812,99 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(
-                  uploaded ? '✓ File loaded' : 'Supports PDF, JPG, PNG',
-                  style: TextStyle(fontSize: 11, color: uploaded ? AppColors.successLight : AppColors.textSecondaryLight),
-                ),
+                const SizedBox(height: 2),
+                Text(subtitle, style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
               ],
             ),
           ),
-          ElevatedButton(
-            onPressed: onUpload,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: uploaded ? AppColors.successLight : null,
-              foregroundColor: uploaded ? Colors.white : null,
+          InkWell(
+            onTap: onUpload,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isUploaded ? const Color(0xFF10B981).withValues(alpha: 0.15) : primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isUploaded ? const Color(0xFF10B981) : primaryColor),
+              ),
+              child: Row(
+                children: [
+                  Icon(isUploaded ? Icons.check_circle : Icons.upload_file, size: 14, color: isUploaded ? const Color(0xFF10B981) : primaryColor),
+                  const SizedBox(width: 4),
+                  Text(isUploaded ? 'Uploaded' : 'Upload', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isUploaded ? const Color(0xFF10B981) : primaryColor)),
+                ],
+              ),
             ),
-            child: Text(uploaded ? 'Uploaded' : 'Choose File'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceOptionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isActive,
+    required bool isDark,
+    required Color primaryColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isActive ? primaryColor : (isDark ? const Color(0xFF1E1E2A) : const Color(0xFFF9F8FD)),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isActive ? primaryColor : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+            width: isActive ? 2.0 : 1.0,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 24, color: isActive ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569))),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.white : (isDark ? Colors.white : const Color(0xFF1E293B)),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: isActive ? Colors.white.withValues(alpha: 0.8) : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (isActive) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                child: Text('ACTIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: primaryColor)),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

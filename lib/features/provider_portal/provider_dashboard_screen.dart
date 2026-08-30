@@ -318,16 +318,26 @@ class ProviderDashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      booking.serviceName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    Text('Customer: ${booking.customerName}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        booking.serviceName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Customer: ${booking.customerName}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                AppSpacing.width12,
                 StatusBadge.booking(booking.status),
               ],
             ),

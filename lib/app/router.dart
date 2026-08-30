@@ -75,6 +75,27 @@ final GoRouter appRouter = GoRouter(
         return CategoryScreen(categoryId: categoryId);
       },
     ),
+    // Provider Screens
+    GoRoute(
+      path: '/provider/dashboard',
+      builder: (context, state) => const ProviderDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/provider/services',
+      builder: (context, state) => const ProviderServicesScreen(),
+    ),
+    GoRoute(
+      path: '/provider/availability',
+      builder: (context, state) => const provider_portal.ProviderProfileScreen(),
+    ),
+    GoRoute(
+      path: '/provider/bookings',
+      builder: (context, state) => const BookingsHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/provider/profile',
+      builder: (context, state) => const provider_portal.ProviderProfileScreen(),
+    ),
     GoRoute(
       path: '/provider/:id',
       builder: (context, state) {
@@ -122,28 +143,6 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
-    ),
-
-    // Provider Screens
-    GoRoute(
-      path: '/provider/dashboard',
-      builder: (context, state) => const ProviderDashboardScreen(),
-    ),
-    GoRoute(
-      path: '/provider/services',
-      builder: (context, state) => const ProviderServicesScreen(),
-    ),
-    GoRoute(
-      path: '/provider/availability',
-      builder: (context, state) => const provider_portal.ProviderProfileScreen(),
-    ),
-    GoRoute(
-      path: '/provider/bookings',
-      builder: (context, state) => const BookingsHistoryScreen(),
-    ),
-    GoRoute(
-      path: '/provider/profile',
-      builder: (context, state) => const provider_portal.ProviderProfileScreen(),
     ),
 
     // Admin Screens

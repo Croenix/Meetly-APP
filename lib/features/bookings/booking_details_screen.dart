@@ -129,24 +129,27 @@ class BookingDetailsScreen extends ConsumerWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          booking.serviceName,
-                                          style: textTheme.bodyLarge?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18,
-                                              ),
-                                        ),
-                                        Text(
-                                          'with ${booking.providerName}',
-                                          style: textTheme.bodyMedium?.copyWith(
-                                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                              ),
-                                        ),
-                                      ],
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            booking.serviceName,
+                                            style: textTheme.bodyLarge?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18,
+                                                ),
+                                          ),
+                                          Text(
+                                            'with ${booking.providerName}',
+                                            style: textTheme.bodyMedium?.copyWith(
+                                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
+                                    AppSpacing.width12,
                                     StatusBadge.booking(booking.status),
                                   ],
                                 ),

@@ -82,7 +82,9 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                         AppSpacing.height32,
 
-                        // Switching Option to Provider Workspace / Business Profile
+                        // Account & Workspace Switching Section
+                        _buildSectionHeader('Account & Workspace Switching', textTheme, isDark),
+                        AppSpacing.height12,
                         Container(
                           padding: const EdgeInsets.all(16.0),
                           decoration: BoxDecoration(
@@ -95,61 +97,90 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF312E81)
-                                  : const Color(0xFFE0E7FF),
+                              color: isDark ? const Color(0xFF312E81) : const Color(0xFFE0E7FF),
                               width: 1.5,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppColors.surfaceDark : Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.storefront_outlined,
-                                  color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                                  size: 26,
-                                ),
-                              ),
-                              AppSpacing.width16,
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Business Profile',
-                                      style: textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : Colors.indigo[900],
-                                      ),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? AppColors.surfaceDark : Colors.white,
+                                      shape: BoxShape.circle,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Switch to the Provider Portal to list services, configure your business profile, and view incoming job bookings.',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        height: 1.3,
-                                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                      ),
+                                    child: Icon(
+                                      Icons.swap_horiz_rounded,
+                                      color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                                      size: 24,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  AppSpacing.width12,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Switch Role & Workspace',
+                                          style: textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : Colors.indigo[900],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Easily switch between Customer, Service Professional, or Admin accounts.',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            height: 1.3,
+                                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              AppSpacing.width12,
-                              IconButton(
-                                icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                                onPressed: () {
-                                  ref.read(authStateProvider.notifier).setRole(UserRole.provider);
-                                  context.go('/provider/dashboard');
-                                },
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildRoleSwitchCard(
+                                      context,
+                                      ref,
+                                      title: 'Customer Workspace',
+                                      icon: Icons.person_outline,
+                                      isActive: user.role == UserRole.customer,
+                                      onTap: () async {
+                                        await ref.read(authStateProvider.notifier).loginAsDemo(UserRole.customer);
+                                        if (context.mounted) context.go('/home');
+                                      },
+                                      isDark: isDark,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildRoleSwitchCard(
+                                      context,
+                                      ref,
+                                      title: 'Professional Portal',
+                                      icon: Icons.work_outline,
+                                      isActive: user.role == UserRole.provider,
+                                      onTap: () async {
+                                        await ref.read(authStateProvider.notifier).loginAsDemo(UserRole.provider);
+                                        if (context.mounted) context.go('/provider/dashboard');
+                                      },
+                                      isDark: isDark,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                        AppSpacing.height32,
+                        AppSpacing.height24,
 
                         // Other settings rows
                         _buildSectionHeader('Preferences', textTheme, isDark),
@@ -283,6 +314,77 @@ class ProfileScreen extends ConsumerWidget {
           ),
           trailing: const Icon(Icons.chevron_right, size: 18),
           onTap: () {},
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleSwitchCard(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    const primaryColor = Color(0xFF6C5CE7);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? primaryColor
+              : (isDark ? AppColors.surfaceDark : Colors.white),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isActive
+                ? primaryColor
+                : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+            width: isActive ? 1.8 : 1.0,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isActive ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.white : (isDark ? Colors.white : const Color(0xFF1E293B)),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (isActive) ...[
+              const SizedBox(height: 2),
+              Container(
+                width: 4,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

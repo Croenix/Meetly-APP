@@ -5,6 +5,7 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimensions.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../core/models/booking.dart';
+import '../../core/models/app_user.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
@@ -73,6 +74,7 @@ class BookingsHistoryScreen extends ConsumerWidget {
                           'Find a trusted professional for your next task or check back later.',
                           isDark,
                           textTheme,
+                          user.role,
                         ),
                         
                         // 2. Completed Tab
@@ -83,6 +85,7 @@ class BookingsHistoryScreen extends ConsumerWidget {
                           'Your completed bookings and service histories will appear here.',
                           isDark,
                           textTheme,
+                          user.role,
                         ),
                         
                         // 3. Cancelled Tab
@@ -93,6 +96,7 @@ class BookingsHistoryScreen extends ConsumerWidget {
                           'Cancelled bookings will be listed here.',
                           isDark,
                           textTheme,
+                          user.role,
                         ),
                       ],
                     );
@@ -121,6 +125,7 @@ class BookingsHistoryScreen extends ConsumerWidget {
     String emptyDesc,
     bool isDark,
     TextTheme textTheme,
+    UserRole role,
   ) {
     if (list.isEmpty) {
       return EmptyState(
@@ -168,7 +173,9 @@ class BookingsHistoryScreen extends ConsumerWidget {
                 ),
                 AppSpacing.height4,
                 Text(
-                  'Professional: ${booking.providerName}',
+                  role == UserRole.provider
+                      ? 'Customer: ${booking.customerName} (${booking.customerPhone})'
+                      : 'Professional: ${booking.providerName}',
                   style: TextStyle(
                     fontSize: 13,
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,

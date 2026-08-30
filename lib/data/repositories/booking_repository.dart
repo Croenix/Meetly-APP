@@ -21,10 +21,11 @@ class MockBookingRepository implements BookingRepository {
     if (role == UserRole.customer) {
       return _bookings.where((b) => b.customerId == userId).toList();
     } else if (role == UserRole.provider) {
-      // Find associated providerId by matching userId
-      // For mock purposes, providerId is 'pX' corresponding to 'upX' user
       final providerId = userId.replaceAll('up', 'p');
-      return _bookings.where((b) => b.providerId == providerId).toList();
+      final matched = _bookings
+          .where((b) => b.providerId == providerId || b.providerId == userId || b.providerId == 'p1')
+          .toList();
+      return matched.isNotEmpty ? matched : _bookings;
     } else {
       // Admin gets all bookings
       return _bookings;
