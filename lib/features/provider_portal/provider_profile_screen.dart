@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/models/app_user.dart';
 import '../../core/models/service_provider.dart';
-import '../../core/widgets/avatar.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/provider_repository.dart';
+import '../home/widgets/server_connected_avatar_widget.dart';
 
 class ProviderProfileScreen extends ConsumerStatefulWidget {
   const ProviderProfileScreen({super.key});
@@ -182,12 +182,14 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen>
                           children: [
                             Stack(
                               children: [
-                                AppAvatar(
-                                  url: provider.portfolioImages.isNotEmpty
+                                ServerConnectedAvatarWidget(
+                                  imageUrl: provider.portfolioImages.isNotEmpty
                                       ? provider.portfolioImages.first
                                       : null,
-                                  name: provider.businessName,
-                                  size: 68,
+                                  fallbackInitial: provider.businessName.isNotEmpty
+                                      ? provider.businessName[0]
+                                      : 'P',
+                                  radius: 34,
                                 ),
                                 Positioned(
                                   bottom: 0,

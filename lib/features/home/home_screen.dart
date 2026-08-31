@@ -6,7 +6,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimensions.dart';
 import '../../app/theme/app_spacing.dart';
-import '../../core/widgets/avatar.dart';
 import '../../core/widgets/category_card.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
@@ -18,6 +17,7 @@ import '../../core/models/service_provider.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/services/analytics_service.dart';
 import '../../core/services/location_service.dart';
+import 'widgets/server_connected_avatar_widget.dart';
 
 // StateProvider to reactively store the user selected city location
 final selectedLocationProvider = StateProvider<String?>((ref) => null);
@@ -326,10 +326,11 @@ class HomeScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          AppAvatar(
-                                url: user.avatarUrl,
-                                name: user.name,
-                                size: 40,
+                          ServerConnectedAvatarWidget(
+                                imageUrl: user.avatarUrl,
+                                fallbackInitial: user.name.isNotEmpty ? user.name[0] : 'U',
+                                radius: 20,
+                                onTap: () => context.push('/profile'),
                               )
                               .animate()
                               .scale(

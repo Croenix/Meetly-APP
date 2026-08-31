@@ -13,6 +13,8 @@ import 'auth_handshake_service.dart';
 typedef AdminTelemetryData = SystemTelemetryModel;
 typedef DeviceSessionInfo = DeviceSessionModel;
 
+enum ServerConnectionStatus { connected, connecting, disconnected }
+
 // Global Riverpod Provider for RealtimeWebSocketService
 final realtimeWebSocketServiceProvider = Provider<RealtimeWebSocketService>((ref) {
   final service = RealtimeWebSocketService();
@@ -24,6 +26,16 @@ final realtimeWebSocketServiceProvider = Provider<RealtimeWebSocketService>((ref
 final adminTelemetryStreamProvider = StreamProvider<SystemTelemetryModel>((ref) {
   final service = ref.watch(realtimeWebSocketServiceProvider);
   return service.telemetryStream;
+});
+
+// Riverpod Provider for Server Connection Status
+final serverConnectionStatusProvider = Provider<ServerConnectionStatus>((ref) {
+  final telemetryAsync = ref.watch(adminTelemetryStreamProvider);
+  return telemetryAsync.when(
+    data: (data) => data.isConnected ? ServerConnectionStatus.connected : ServerConnectionStatus.disconnected,
+    loading: () => ServerConnectionStatus.connecting,
+    error: (err, stack) => ServerConnectionStatus.disconnected,
+  );
 });
 
 class RealtimeWebSocketService {
