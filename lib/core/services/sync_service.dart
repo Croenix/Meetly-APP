@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../database/local_database.dart';
+import '../models/business_listing.dart';
 
 // Helper to resolve the correct regional database instance
 FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
@@ -334,5 +335,59 @@ class SyncService {
     return (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
         ? 'http://10.0.2.2:5000'
         : 'http://localhost:5000';
+  }
+
+  // Trigger 3-Option Admin Pincode Business Aggregator Engine
+  Future<Map<String, dynamic>> triggerPincodeFetch(String option, {String? pincode, String? category}) async {
+    try {
+      final serverUrl = await fetchServerUrl();
+      final uri = Uri.parse('$serverUrl/api/admin/fetch-directory');
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'option': option,
+          if (pincode != null && pincode.isNotEmpty) 'pincode': pincode,
+          if (category != null && category.isNotEmpty) 'category': category,
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        if (data['directory'] != null && data['directory'] is List) {
+          final list = (data['directory'] as List).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+          await HiveLocalDatabase.instance.saveMapList('business_directory', list);
+        }
+        return data;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Failed to trigger pincode fetch ($e).");
+      }
+    }
+    return {'status': 'error', 'message': 'Failed to communicate with Node.js server'};
+  }
+
+  // Fetch Business Directory - Node.js Backend Primary with Hive Storage Fallback
+  Future<List<BusinessListing>> fetchBusinessDirectory() async {
+    try {
+      final serverUrl = await fetchServerUrl();
+      final uri = Uri.parse('$serverUrl/api/directory');
+      final res = await http.get(uri).timeout(const Duration(seconds: 3));
+      if (res.statusCode == 200) {
+        final List<dynamic> raw = json.decode(res.body);
+        final list = raw.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+        await HiveLocalDatabase.instance.saveMapList('business_directory', list);
+        return list.map((item) => BusinessListing.fromJson(item)).toList();
+      }
+    } catch (_) {}
+
+    // Offline Hive Fallback
+    final cached = await HiveLocalDatabase.instance.getMapList('business_directory');
+    if (cached != null && cached.isNotEmpty) {
+      return cached.map((item) => BusinessListing.fromJson(item)).toList();
+    }
+
+    return [BusinessListing.fallback()];
   }
 }

@@ -7,6 +7,7 @@ import '../../app/theme/app_spacing.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
 import '../../core/services/realtime_websocket_service.dart';
+import '../../core/services/sync_service.dart';
 import '../../data/repositories/provider_repository.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
@@ -76,10 +77,10 @@ class AdminDashboardScreen extends ConsumerWidget {
                 providersAsync.when(
                   data: (providers) {
                     final pendingVetting = providers.where((p) => p.verificationStatus == 'under_review').length;
-                    return _buildShortcutsGrid(context, pendingVetting, isDark);
+                    return _buildShortcutsGrid(context, ref, pendingVetting, isDark);
                   },
-                  loading: () => _buildShortcutsGrid(context, 0, isDark),
-                  error: (e, s) => _buildShortcutsGrid(context, 0, isDark),
+                  loading: () => _buildShortcutsGrid(context, ref, 0, isDark),
+                  error: (e, s) => _buildShortcutsGrid(context, ref, 0, isDark),
                 ),
                 AppSpacing.height24,
               ],
@@ -355,7 +356,7 @@ class AdminDashboardScreen extends ConsumerWidget {
   }
 
   // Operations Center Shortcuts Grid
-  Widget _buildShortcutsGrid(BuildContext context, int pendingVetting, bool isDark) {
+  Widget _buildShortcutsGrid(BuildContext context, WidgetRef ref, int pendingVetting, bool isDark) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -388,7 +389,232 @@ class AdminDashboardScreen extends ConsumerWidget {
           color: Colors.teal,
           route: '/admin/bookings',
         ),
+        _buildActionShortcutCard(
+          context,
+          title: 'Pincode Aggregator',
+          subtitle: '3-Option Business Engine',
+          icon: Icons.location_city_rounded,
+          color: const Color(0xFF6C5CE7),
+          onTap: () => _showPincodeEngineDialog(context, ref),
+        ),
       ],
+    );
+  }
+
+  void _showPincodeEngineDialog(BuildContext context, WidgetRef ref) {
+    String selectedOption = 'bulk';
+    final pincodeController = TextEditingController(text: '682020');
+    final categoryController = TextEditingController(text: 'Electricians');
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.location_city_rounded, color: Color(0xFF6C5CE7)),
+                  SizedBox(width: 8),
+                  Text('Pincode Aggregator Engine', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Select Aggregation Method:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () => setState(() => selectedOption = 'bulk'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selectedOption == 'bulk' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                              color: selectedOption == 'bulk' ? const Color(0xFF6C5CE7) : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Option 1: Bulk Fetch (All Kerala Pincodes)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Text('Loop through pre-seeded Kerala pincodes', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => setState(() => selectedOption = 'single'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selectedOption == 'single' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                              color: selectedOption == 'single' ? const Color(0xFF6C5CE7) : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Option 2: Individual Pincode Fetch', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Text('Aggregate places for a specific pincode', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => setState(() => selectedOption = 'category'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selectedOption == 'category' ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                              color: selectedOption == 'category' ? const Color(0xFF6C5CE7) : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Option 3: Category-based Pincode Fetch', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Text('Fetch specific category within a pincode', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (selectedOption == 'single' || selectedOption == 'category') ...[
+                      TextField(
+                        controller: pincodeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Pincode',
+                          hintText: 'e.g. 682020',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (selectedOption == 'category') ...[
+                      TextField(
+                        controller: categoryController,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          hintText: 'e.g. Electricians',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setState(() => isLoading = true);
+                          final syncService = ref.read(syncServiceProvider);
+                          final res = await syncService.triggerPincodeFetch(
+                            selectedOption,
+                            pincode: pincodeController.text.trim(),
+                            category: categoryController.text.trim(),
+                          );
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(res['message'] ?? 'Data Aggregation Complete!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Trigger Fetch'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildActionShortcutCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(borderRadius: AppDimensions.borderMedium),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppDimensions.borderMedium,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -11,6 +11,7 @@ import '../features/auth/register_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/search/category_screen.dart';
+import '../features/search/directory_search_screen.dart';
 import '../features/providers/provider_profile_screen.dart';
 import '../features/favorites/favorites_screen.dart';
 import '../features/profile/profile_screen.dart';
@@ -61,6 +62,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/search',
       builder: (context, state) => const SearchScreen(),
+    ),
+    GoRoute(
+      path: '/directory',
+      builder: (context, state) => const DirectorySearchScreen(),
     ),
     GoRoute(
       path: '/category/:id',
