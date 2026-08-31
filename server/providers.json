@@ -1,236 +1,235 @@
-[
-  {
-    "id": "p1",
-    "userId": "up2",
-    "businessName": "Rajesh Electrical Solutions",
-    "profession": "Certified Industrial & Home Electrician",
-    "rating": 4.8,
-    "reviewCount": 142,
-    "distance": 1.2,
-    "startingPrice": 199,
-    "verified": true,
-    "bio": "Providing safe, certified electrical installations, rewiring, and appliance repair services in Kochi for over 8 years. Specialized in short-circuits and home automation systems.",
-    "portfolioImages": [
-      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600",
-      "https://images.unsplash.com/photo-1558224492-db71317d63a4?w=600"
-    ],
-    "workingHours": {
-      "Mon": {
-        "available": true,
-        "start": "09:00",
-        "end": "19:00"
-      },
-      "Tue": {
-        "available": true,
-        "start": "09:00",
-        "end": "19:00"
-      },
-      "Wed": {
-        "available": true,
-        "start": "09:00",
-        "end": "19:00"
-      },
-      "Thu": {
-        "available": true,
-        "start": "09:00",
-        "end": "19:00"
-      },
-      "Fri": {
-        "available": true,
-        "start": "09:00",
-        "end": "19:00"
-      },
-      "Sat": {
-        "available": true,
-        "start": "09:00",
-        "end": "17:00"
-      },
-      "Sun": {
-        "available": false,
-        "start": "00:00",
-        "end": "00:00"
-      }
+{
+  "id": "p1",
+  "userId": "up2",
+  "businessName": "Rajesh Electrical Solutions",
+  "profession": "Certified Industrial & Home Electrician",
+  "rating": 4.8,
+  "reviewCount": 142,
+  "distance": 1.2,
+  "startingPrice": 199,
+  "verified": true,
+  "bio": "Providing safe, certified electrical installations, rewiring, and appliance repair services in Kochi for over 8 years. Specialized in short-circuits and home automation systems.",
+  "portfolioImages": [
+    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600",
+    "https://images.unsplash.com/photo-1558224492-db71317d63a4?w=600"
+  ],
+  "workingHours": {
+    "Mon": {
+      "available": true,
+      "start": "09:00",
+      "end": "19:00"
     },
-    "serviceArea": "Kochi city limits, Kakkanad, Edappally, and Tripunithura",
-    "responseTime": "Within 30 mins",
-    "category": "Electrical",
-    "phone": "+91 9895100002",
-    "location": "Kochi",
-    "verificationStatus": "verified"
+    "Tue": {
+      "available": true,
+      "start": "09:00",
+      "end": "19:00"
+    },
+    "Wed": {
+      "available": true,
+      "start": "09:00",
+      "end": "19:00"
+    },
+    "Thu": {
+      "available": true,
+      "start": "09:00",
+      "end": "19:00"
+    },
+    "Fri": {
+      "available": true,
+      "start": "09:00",
+      "end": "19:00"
+    },
+    "Sat": {
+      "available": true,
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "Sun": {
+      "available": false,
+      "start": "00:00",
+      "end": "00:00"
+    }
   },
-  {
-    "id": "p2",
-    "userId": "up6",
-    "businessName": "Anil Electrical Works",
-    "profession": "Residential Wiring & Repair Contractor",
-    "rating": 4.6,
-    "reviewCount": 78,
-    "distance": 2.8,
-    "startingPrice": 249,
-    "verified": true,
-    "bio": "Affordable and reliable home electrical services including fans, lights, switchboards, inverter backup installation, and fault finding. Trustworthy and punctual service.",
-    "portfolioImages": [
-      "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600",
-      "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600"
-    ],
-    "workingHours": {
-      "Mon": {
-        "available": true,
-        "start": "08:30",
-        "end": "18:00"
-      },
-      "Tue": {
-        "available": true,
-        "start": "08:30",
-        "end": "18:00"
-      },
-      "Wed": {
-        "available": true,
-        "start": "08:30",
-        "end": "18:00"
-      },
-      "Thu": {
-        "available": true,
-        "start": "08:30",
-        "end": "18:00"
-      },
-      "Fri": {
-        "available": true,
-        "start": "08:30",
-        "end": "18:00"
-      },
-      "Sat": {
-        "available": true,
-        "start": "08:30",
-        "end": "18:00"
-      },
-      "Sun": {
-        "available": false,
-        "start": "00:00",
-        "end": "00:00"
-      }
+  "serviceArea": "Kochi city limits, Kakkanad, Edappally, and Tripunithura",
+  "responseTime": "Within 30 mins",
+  "category": "Electrical",
+  "phone": "+91 9895100002",
+  "location": "Kochi",
+  "verificationStatus": "verified"
+},
+{
+  "id": "p2",
+  "userId": "up6",
+  "businessName": "Anil Electrical Works",
+  "profession": "Residential Wiring & Repair Contractor",
+  "rating": 4.6,
+  "reviewCount": 78,
+  "distance": 2.8,
+  "startingPrice": 249,
+  "verified": true,
+  "bio": "Affordable and reliable home electrical services including fans, lights, switchboards, inverter backup installation, and fault finding. Trustworthy and punctual service.",
+  "portfolioImages": [
+    "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600",
+    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600"
+  ],
+  "workingHours": {
+    "Mon": {
+      "available": true,
+      "start": "08:30",
+      "end": "18:00"
     },
-    "serviceArea": "Kottayam, Kumarakom, and Ettumanoor area",
-    "responseTime": "Within 1 hour",
-    "category": "Electrical",
-    "phone": "+91 9895100006",
-    "location": "Kottayam",
-    "verificationStatus": "verified"
+    "Tue": {
+      "available": true,
+      "start": "08:30",
+      "end": "18:00"
+    },
+    "Wed": {
+      "available": true,
+      "start": "08:30",
+      "end": "18:00"
+    },
+    "Thu": {
+      "available": true,
+      "start": "08:30",
+      "end": "18:00"
+    },
+    "Fri": {
+      "available": true,
+      "start": "08:30",
+      "end": "18:00"
+    },
+    "Sat": {
+      "available": true,
+      "start": "08:30",
+      "end": "18:00"
+    },
+    "Sun": {
+      "available": false,
+      "start": "00:00",
+      "end": "00:00"
+    }
   },
-  {
-    "id": "p4",
-    "userId": "up3",
-    "businessName": "Kochi Cleaning Crew",
-    "profession": "Professional Deep Cleaners",
-    "rating": 4.9,
-    "reviewCount": 215,
-    "distance": 0.8,
-    "startingPrice": 499,
-    "verified": true,
-    "bio": "Home deep cleaning, sofa cleaning, kitchen sanitation, and bathroom cleaning services. Eco-friendly cleaning materials and modern equipment used.",
-    "portfolioImages": [
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600"
-    ],
-    "workingHours": {
-      "Mon": {
-        "available": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "Tue": {
-        "available": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "Wed": {
-        "available": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "Thu": {
-        "available": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "Fri": {
-        "available": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "Sat": {
-        "available": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "Sun": {
-        "available": true,
-        "start": "09:00",
-        "end": "17:00"
-      }
+  "serviceArea": "Kottayam, Kumarakom, and Ettumanoor area",
+  "responseTime": "Within 1 hour",
+  "category": "Electrical",
+  "phone": "+91 9895100006",
+  "location": "Kottayam",
+  "verificationStatus": "verified"
+},
+{
+  "id": "p4",
+  "userId": "up3",
+  "businessName": "Kochi Cleaning Crew",
+  "profession": "Professional Deep Cleaners",
+  "rating": 4.9,
+  "reviewCount": 215,
+  "distance": 0.8,
+  "startingPrice": 499,
+  "verified": true,
+  "bio": "Home deep cleaning, sofa cleaning, kitchen sanitation, and bathroom cleaning services. Eco-friendly cleaning materials and modern equipment used.",
+  "portfolioImages": [
+    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600"
+  ],
+  "workingHours": {
+    "Mon": {
+      "available": true,
+      "start": "08:00",
+      "end": "20:00"
     },
-    "serviceArea": "Kochi & Kakkanad area",
-    "responseTime": "Within 15 mins",
-    "category": "Cleaning",
-    "phone": "+91 9895100003",
-    "location": "Kochi",
-    "verificationStatus": "verified"
+    "Tue": {
+      "available": true,
+      "start": "08:00",
+      "end": "20:00"
+    },
+    "Wed": {
+      "available": true,
+      "start": "08:00",
+      "end": "20:00"
+    },
+    "Thu": {
+      "available": true,
+      "start": "08:00",
+      "end": "20:00"
+    },
+    "Fri": {
+      "available": true,
+      "start": "08:00",
+      "end": "20:00"
+    },
+    "Sat": {
+      "available": true,
+      "start": "08:00",
+      "end": "20:00"
+    },
+    "Sun": {
+      "available": true,
+      "start": "09:00",
+      "end": "17:00"
+    }
   },
-  {
-    "id": "p7",
-    "userId": "up7",
-    "businessName": "Express Plumbers Kochi",
-    "profession": "Licensed Leak Repair Specialists",
-    "rating": 4.7,
-    "reviewCount": 94,
-    "distance": 1.5,
-    "startingPrice": 299,
-    "verified": true,
-    "bio": "Emergency leak resolution, pipe replacements, tap installations, blockages, and water tank washing. Fast and reliable support.",
-    "portfolioImages": [
-      "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600"
-    ],
-    "workingHours": {
-      "Mon": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      },
-      "Tue": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      },
-      "Wed": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      },
-      "Thu": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      },
-      "Fri": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      },
-      "Sat": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      },
-      "Sun": {
-        "available": true,
-        "start": "00:00",
-        "end": "23:59"
-      }
+  "serviceArea": "Kochi & Kakkanad area",
+  "responseTime": "Within 15 mins",
+  "category": "Cleaning",
+  "phone": "+91 9895100003",
+  "location": "Kochi",
+  "verificationStatus": "verified"
+},
+{
+  "id": "p7",
+  "userId": "up7",
+  "businessName": "Express Plumbers Kochi",
+  "profession": "Licensed Leak Repair Specialists",
+  "rating": 4.7,
+  "reviewCount": 94,
+  "distance": 1.5,
+  "startingPrice": 299,
+  "verified": true,
+  "bio": "Emergency leak resolution, pipe replacements, tap installations, blockages, and water tank washing. Fast and reliable support.",
+  "portfolioImages": [
+    "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600"
+  ],
+  "workingHours": {
+    "Mon": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
     },
-    "serviceArea": "Kochi and nearby sub-regions",
-    "responseTime": "Immediate 24/7 Support",
-    "category": "Plumbing",
-    "phone": "+91 9895100007",
-    "location": "Kochi",
-    "verificationStatus": "verified"
-  }
+    "Tue": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
+    },
+    "Wed": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
+    },
+    "Thu": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
+    },
+    "Fri": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
+    },
+    "Sat": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
+    },
+    "Sun": {
+      "available": true,
+      "start": "00:00",
+      "end": "23:59"
+    }
+  },
+  "serviceArea": "Kochi and nearby sub-regions",
+  "responseTime": "Immediate 24/7 Support",
+  "category": "Plumbing",
+  "phone": "+91 9895100007",
+  "location": "Kochi",
+  "verificationStatus": "verified"
+}
 ]

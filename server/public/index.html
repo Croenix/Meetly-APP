@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meetly Admin Console — Master Control & Pincode Directory Engine</title>
+  <title>Meetly Master Admin Console — MapMyIndia Credentials & Pincode Engine</title>
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -269,7 +269,7 @@
       letter-spacing: 0.8px;
     }
 
-    input[type="text"], select {
+    input[type="text"], input[type="password"], select {
       width: 100%;
       padding: 12px 16px;
       font-size: 14px;
@@ -281,7 +281,7 @@
       outline: none;
     }
 
-    input[type="text"]:focus, select:focus {
+    input[type="text"]:focus, input[type="password"]:focus, select:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--primary-glow);
     }
@@ -410,35 +410,6 @@
       color: var(--secondary);
     }
 
-    /* Modal Dialog */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal-overlay.open {
-      display: flex;
-    }
-
-    .modal-card {
-      background: #0f172a;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px;
-      width: 100%;
-      max-width: 560px;
-      box-shadow: var(--shadow-lg);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
     /* Toast */
     .toast {
       position: fixed;
@@ -476,7 +447,7 @@
       <div class="logo-badge">M</div>
       <div class="header-title">
         <h1>Meetly Master Admin Console</h1>
-        <p>Real-Time Operations, 3-Option Pincode Aggregator & Directory Engine</p>
+        <p>Real-Time Operations & MapMyIndia (Mappls) Pincode Engine</p>
       </div>
     </div>
     <div class="status-panel">
@@ -484,9 +455,13 @@
         <div class="status-indicator online"></div>
         Node.js Server: Online
       </div>
+      <div class="status-badge" id="api-key-status-badge">
+        <i class="fa-solid fa-map-location-dot" style="color: var(--secondary);"></i>
+        MapMyIndia API: <span id="header-api-status" style="color: var(--warning); font-weight: bold; margin-left: 4px;">Checking...</span>
+      </div>
       <div class="status-badge" style="border-color: rgba(52, 211, 153, 0.4);">
         <div class="status-indicator online"></div>
-        Live Connected Devices: <span id="header-connected-count" style="color: var(--success); font-weight: bold; margin-left: 4px;">0</span>
+        Live Devices: <span id="header-connected-count" style="color: var(--success); font-weight: bold; margin-left: 4px;">0</span>
       </div>
     </div>
   </header>
@@ -496,8 +471,11 @@
     <button class="tab-button active" onclick="switchTab('analytics-tab', this)">
       <i class="fa-solid fa-chart-line"></i> Analytics & Live Telemetry
     </button>
+    <button class="tab-button" onclick="switchTab('api-keys-tab', this)">
+      <i class="fa-solid fa-key"></i> API Settings & Credentials
+    </button>
     <button class="tab-button" onclick="switchTab('pincode-tab', this)">
-      <i class="fa-solid fa-location-dot"></i> 3-Option Pincode Engine
+      <i class="fa-solid fa-map-location-dot"></i> MapMyIndia (Mappls) Engine
     </button>
     <button class="tab-button" onclick="switchTab('banners-tab', this)">
       <i class="fa-solid fa-rectangle-ad"></i> Dynamic Banners
@@ -511,7 +489,6 @@
 
     <!-- TAB 1: ANALYTICS & LIVE TELEMETRY -->
     <div id="analytics-tab" class="tab-content active">
-      <!-- Metric Cards Top Grid -->
       <div class="grid-4">
         <div class="card" style="padding: 18px; border-color: rgba(52, 211, 153, 0.3);">
           <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Live Connected Devices</div>
@@ -538,10 +515,10 @@
         </div>
 
         <div class="card" style="padding: 18px;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pincode Directory Records</div>
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">MapMyIndia Directory Records</div>
           <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
             <span id="directory-count-card" style="font-size: 28px; font-weight: 800; color: var(--secondary);">0</span>
-            <span style="font-size: 12px; color: var(--text-muted);">local business listings</span>
+            <span style="font-size: 12px; color: var(--text-muted);">verified eLoc records</span>
           </div>
           <div style="font-size: 11px; color: var(--secondary); font-weight: 500; margin-top: 4px;">
             Kerala Coverage Active
@@ -559,7 +536,6 @@
         </div>
       </div>
 
-      <!-- Charts Section -->
       <div class="grid-2">
         <div class="card">
           <div class="card-title">
@@ -579,7 +555,6 @@
         </div>
       </div>
 
-      <!-- Live Connected Devices Table -->
       <div class="card" style="border-color: rgba(52, 211, 153, 0.3);">
         <div class="card-title">
           <span><i class="fa-solid fa-plug-circle-check" style="color: var(--success);"></i> Live Verified Connected Devices</span>
@@ -606,16 +581,105 @@
     </div>
 
 
-    <!-- TAB 2: 3-OPTION PINCODE AGGREGATOR ENGINE & BUSINESS DIRECTORY -->
-    <div id="pincode-tab" class="tab-content">
+    <!-- TAB 2: API SETTINGS & CREDENTIALS MANAGEMENT -->
+    <div id="api-keys-tab" class="tab-content">
       <div class="card">
         <div class="card-title">
-          <span><i class="fa-solid fa-database" style="color: var(--primary);"></i> 3-Option Pincode Data Scraping Engine</span>
-          <span class="badge" id="directory-total-badge">0 Total Listings</span>
+          <span><i class="fa-solid fa-key" style="color: var(--warning);"></i> API Credentials Management Module</span>
+          <span class="badge" id="api-key-active-status" style="background: rgba(251, 191, 36, 0.15); color: var(--warning);">Not Configured</span>
         </div>
 
         <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-          Select one of the 3 data fetching methods to scrape, aggregate, and persist rich local business directory listings into the Node.js server. Extracted fields include Phone, Address, Coordinates, Ratings, Review Counts, Working Hours, Website, and Photo URLs.
+          Configure your external API credentials below to power the live MapMyIndia (Mappls API) pincode data extraction engine. ZERO dummy or fake data is hardcoded. All places are retrieved dynamically via verified MapMyIndia REST & OAuth endpoints.
+        </p>
+
+        <!-- MapMyIndia (Mappls API) Group -->
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 16px; border: 1.5px solid rgba(6, 182, 212, 0.3); display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <i class="fa-solid fa-map-location-dot" style="font-size: 20px; color: var(--secondary);"></i>
+              <div>
+                <h4 style="font-size: 14px; font-weight: 700;">MapMyIndia (Mappls API) Credentials</h4>
+                <p style="font-size: 11px; color: var(--text-muted);">Used for Mappls Places TextSearch, Geocoding, eLoc Resolution & Verified Kerala Pincode Aggregation</p>
+              </div>
+            </div>
+            <span class="badge" id="mmi-key-status" style="background: rgba(248, 113, 113, 0.15); color: var(--error);">Credentials Missing</span>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="input-mmi-client-id">MAPMYINDIA CLIENT ID / REST API KEY</label>
+              <input type="password" id="input-mmi-client-id" placeholder="273c8d..." style="letter-spacing: 1px; font-family: monospace;">
+            </div>
+            <div class="form-group">
+              <label for="input-mmi-client-secret">MAPMYINDIA CLIENT SECRET (FOR OAUTH 2.0)</label>
+              <input type="password" id="input-mmi-client-secret" placeholder="lrn0... (Optional if using direct API Key)" style="letter-spacing: 1px; font-family: monospace;">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 4px;">
+            <button class="btn btn-secondary" onclick="testApiKey('mapmyindia')" id="test-mmi-btn">
+              <i class="fa-solid fa-vial"></i> Test API Connection
+            </button>
+            <button class="btn btn-primary" onclick="saveApiKeys()">
+              <i class="fa-solid fa-floppy-disk"></i> Save Credentials
+            </button>
+          </div>
+        </div>
+
+        <!-- Google Maps API Group (Secondary Fallback) -->
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; margin-top: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <i class="fa-brands fa-google" style="font-size: 18px; color: #4285F4;"></i>
+              <div>
+                <h4 style="font-size: 14px; font-weight: 700;">Google Maps / Places API Key (Secondary Fallback)</h4>
+                <p style="font-size: 11px; color: var(--text-muted);">Optional secondary Places API Key fallback</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="input-gmaps-key">GOOGLE MAPS API KEY</label>
+            <input type="password" id="input-gmaps-key" placeholder="AIzaSy..." style="letter-spacing: 1px; font-family: monospace;">
+          </div>
+
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-secondary" onclick="testApiKey('google')" id="test-gmaps-btn">
+              <i class="fa-solid fa-vial"></i> Test Connection
+            </button>
+            <button class="btn btn-primary" onclick="saveApiKeys()">
+              <i class="fa-solid fa-floppy-disk"></i> Save Credentials
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- TAB 3: MAPMYINDIA (MAPPLS) PINCODE ENGINE -->
+    <div id="pincode-tab" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span><i class="fa-solid fa-map-location-dot" style="color: var(--secondary);"></i> MapMyIndia (Mappls) Pincode Data Aggregation Engine</span>
+          <span class="badge" id="directory-total-badge">0 Total Real Listings</span>
+        </div>
+
+        <div id="api-key-alert-box" style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning); font-size: 18px;"></i>
+            <div>
+              <div style="font-size: 13px; font-weight: 700; color: #ffffff;">MapMyIndia API Status: <span id="engine-key-status" style="color: var(--warning);">Checking...</span></div>
+              <div style="font-size: 11px; color: var(--text-muted);">Ensure valid MapMyIndia API credentials are saved in the API Settings tab before executing fetches.</div>
+            </div>
+          </div>
+          <button class="btn btn-secondary" onclick="switchTab('api-keys-tab', document.querySelectorAll('.tab-button')[1])" style="padding: 6px 14px; font-size: 12px;">
+            Configure Key
+          </button>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+          Select one of the 3 data fetching options below to execute real MapMyIndia (Mappls API) requests. Returned places are strictly validated against postal code bounds and assigned unique eLoc pin references.
         </p>
 
         <!-- 3 Aggregation Options Grid -->
@@ -625,11 +689,11 @@
               <div class="option-icon"><i class="fa-solid fa-network-wired"></i></div>
               <div>
                 <h4 style="font-size: 14px; font-weight: 700;">Option 1: Automated Bulk Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">All Kerala Pincode Loop</p>
+                <p style="font-size: 11px; color: var(--text-muted);">MapMyIndia Kerala Pincode Loop</p>
               </div>
             </div>
             <p style="font-size: 12px; color: var(--text-muted);">
-              Automated scraper loops through pre-seeded Kerala pincodes (682001, 682002, 682020, 673001, 695001, etc.) across all categories.
+              Sequentially queries MapMyIndia API using valid Kerala pincodes (682001, 682002, 682020, 673001, 695001, etc.).
             </p>
           </div>
 
@@ -638,11 +702,11 @@
               <div class="option-icon" style="color: var(--secondary); background: rgba(6, 182, 212, 0.15);"><i class="fa-solid fa-map-pin"></i></div>
               <div>
                 <h4 style="font-size: 14px; font-weight: 700;">Option 2: Individual Pincode Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Target Specific Location</p>
+                <p style="font-size: 11px; color: var(--text-muted);">Target Specific Pincode</p>
               </div>
             </div>
             <p style="font-size: 12px; color: var(--text-muted);">
-              Input a specific pincode (e.g. 682020) to fetch and persist places within that area.
+              Admin inputs a specific pincode, server fetches real places strictly matching that pincode via MapMyIndia Search API.
             </p>
           </div>
 
@@ -655,7 +719,7 @@
               </div>
             </div>
             <p style="font-size: 12px; color: var(--text-muted);">
-              Fetch specific service category listings (Electricians, Plumbers, Schools, etc.) within a target pincode.
+              Queries MapMyIndia API for specific categories (Electrician, Mechanic, School, Plumber, Hospital, Local Shop) per pincode.
             </p>
           </div>
         </div>
@@ -683,18 +747,17 @@
           </div>
 
           <button class="btn btn-primary" onclick="triggerDirectoryFetch()" id="agg-trigger-btn">
-            <i class="fa-solid fa-cloud-arrow-down"></i> Trigger Data Aggregation Engine
+            <i class="fa-solid fa-map-location-dot"></i> Fetch Live MapMyIndia Places
           </button>
         </div>
       </div>
 
-      <!-- Rich Business Directory Data Table -->
+      <!-- Real Business Directory Data Table -->
       <div class="card">
         <div class="card-title">
-          <span>Persisted Business Directory Records (Maximum Extraction Fields)</span>
+          <span>Persisted MapMyIndia Business Directory Records (eLoc Verified)</span>
           <div style="display: flex; gap: 10px;">
-            <input type="text" id="dir-search-input" placeholder="Search business, address, or pincode..." oninput="filterDirectoryTable()" style="width: 240px; padding: 6px 12px; font-size: 12px;">
-            <button class="btn btn-primary" onclick="openAddBusinessModal()" style="padding: 6px 14px; font-size: 12px;">+ Add Record</button>
+            <input type="text" id="dir-search-input" placeholder="Search business, address, or eLoc..." oninput="filterDirectoryTable()" style="width: 240px; padding: 6px 12px; font-size: 12px;">
             <button class="btn btn-secondary" onclick="loadDirectory()" style="padding: 6px 14px; font-size: 12px;">Refresh</button>
           </div>
         </div>
@@ -702,17 +765,16 @@
           <table>
             <thead>
               <tr>
-                <th>BUSINESS NAME & TITLE</th>
+                <th>BUSINESS NAME & eLOC CODE</th>
                 <th>CATEGORIES</th>
                 <th>CONTACT & ADDRESS</th>
-                <th>COORDINATES & MAP</th>
+                <th>COORDINATES & MAPMYINDIA MAP</th>
                 <th>RATINGS & REVIEWS</th>
-                <th>HOURS & STATUS</th>
-                <th>ACTIONS</th>
+                <th>HOURS & AVAILABILITY</th>
               </tr>
             </thead>
             <tbody id="directory-table-body">
-              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading business directory records...</td></tr>
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No directory records. Configure MapMyIndia credentials in "API Settings" and click "Fetch Live MapMyIndia Places".</td></tr>
             </tbody>
           </table>
         </div>
@@ -720,7 +782,7 @@
     </div>
 
 
-    <!-- TAB 3: DYNAMIC BANNERS -->
+    <!-- TAB 4: DYNAMIC BANNERS -->
     <div id="banners-tab" class="tab-content">
       <div class="grid-2">
         <div class="card">
@@ -783,7 +845,7 @@
     </div>
 
 
-    <!-- TAB 4: CATEGORIES CATALOG -->
+    <!-- TAB 5: CATEGORIES CATALOG -->
     <div id="categories-tab" class="tab-content">
       <div class="grid-2">
         <div class="card">
@@ -811,52 +873,6 @@
 
   </main>
 
-  <!-- Add/Edit Business Record Modal -->
-  <div class="modal-overlay" id="biz-modal">
-    <div class="modal-card">
-      <h3 style="font-size: 18px; font-weight: 800; color: white;" id="modal-title">Add Business Listing</h3>
-      
-      <input type="hidden" id="modal-biz-id" value="">
-      
-      <div class="form-group">
-        <label for="modal-biz-name">BUSINESS NAME</label>
-        <input type="text" id="modal-biz-name" placeholder="e.g. Kochi Express Electricians">
-      </div>
-
-      <div style="display: flex; gap: 12px;">
-        <div class="form-group" style="flex: 1;">
-          <label for="modal-biz-cat">PRIMARY CATEGORY</label>
-          <input type="text" id="modal-biz-cat" placeholder="e.g. Electricians">
-        </div>
-        <div class="form-group" style="flex: 1;">
-          <label for="modal-biz-pin">PINCODE</label>
-          <input type="text" id="modal-biz-pin" placeholder="e.g. 682020">
-        </div>
-      </div>
-
-      <div style="display: flex; gap: 12px;">
-        <div class="form-group" style="flex: 1;">
-          <label for="modal-biz-phone">PHONE NUMBER</label>
-          <input type="text" id="modal-biz-phone" placeholder="+91 9847123456">
-        </div>
-        <div class="form-group" style="flex: 1;">
-          <label for="modal-biz-city">CITY / REGION</label>
-          <input type="text" id="modal-biz-city" placeholder="Kochi">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="modal-biz-addr">FULL ADDRESS</label>
-        <input type="text" id="modal-biz-addr" placeholder="Main Road, Vyttila, Kochi">
-      </div>
-
-      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 10px;">
-        <button class="btn btn-secondary" onclick="closeBusinessModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveBusinessRecord()">Save Record</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Toast -->
   <div class="toast" id="toast-message">
     <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
@@ -868,6 +884,7 @@
     let directoryList = [];
     let banners = [];
     let categories = [];
+    let savedApiKeys = { mapmyindiaClientId: '', mapmyindiaClientSecret: '', googleMapsApiKey: '', customScrapingApiKey: '' };
 
     function switchTab(tabId, button) {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -878,6 +895,113 @@
 
       if (tabId === 'analytics-tab') loadAnalytics();
       if (tabId === 'pincode-tab') loadDirectory();
+      if (tabId === 'api-keys-tab') loadApiKeys();
+    }
+
+    async function loadApiKeys() {
+      try {
+        const res = await fetch('/api/admin/api-keys');
+        if (res.ok) {
+          savedApiKeys = await res.json();
+          document.getElementById('input-mmi-client-id').value = savedApiKeys.mapmyindiaClientId || '';
+          document.getElementById('input-mmi-client-secret').value = savedApiKeys.mapmyindiaClientSecret || '';
+          document.getElementById('input-gmaps-key').value = savedApiKeys.googleMapsApiKey || '';
+          updateApiKeyBadges();
+        }
+      } catch (_) {}
+    }
+
+    function updateApiKeyBadges() {
+      const hasMMI = savedApiKeys.mapmyindiaClientId && savedApiKeys.mapmyindiaClientId.trim().length > 3;
+      const hasGoogle = savedApiKeys.googleMapsApiKey && savedApiKeys.googleMapsApiKey.trim().length > 5;
+      const hasKey = hasMMI || hasGoogle;
+
+      const statusText = hasMMI ? 'MapMyIndia Active' : (hasGoogle ? 'Google Active' : 'Key Missing');
+      const statusColor = hasKey ? 'var(--success)' : 'var(--warning)';
+      
+      document.getElementById('header-api-status').innerText = hasMMI ? 'MapMyIndia' : (hasGoogle ? 'Google' : 'Missing');
+      document.getElementById('header-api-status').style.color = statusColor;
+
+      const activeBadge = document.getElementById('api-key-active-status');
+      if (activeBadge) {
+        activeBadge.innerText = statusText;
+        activeBadge.style.backgroundColor = hasKey ? 'rgba(52, 211, 153, 0.15)' : 'rgba(251, 191, 36, 0.15)';
+        activeBadge.style.color = statusColor;
+      }
+
+      const mmiBadge = document.getElementById('mmi-key-status');
+      if (mmiBadge) {
+        mmiBadge.innerText = hasMMI ? 'Credentials Configured' : 'Credentials Missing';
+        mmiBadge.style.backgroundColor = hasMMI ? 'rgba(52, 211, 153, 0.15)' : 'rgba(248, 113, 113, 0.15)';
+        mmiBadge.style.color = hasMMI ? 'var(--success)' : 'var(--error)';
+      }
+
+      const engineStatus = document.getElementById('engine-key-status');
+      if (engineStatus) {
+        engineStatus.innerText = hasMMI ? 'MapMyIndia Active' : (hasGoogle ? 'Google Fallback Active' : 'Missing (Configure Key in API Settings)');
+        engineStatus.style.color = statusColor;
+      }
+    }
+
+    async function saveApiKeys() {
+      const mmiId = document.getElementById('input-mmi-client-id').value;
+      const mmiSecret = document.getElementById('input-mmi-client-secret').value;
+      const gmaps = document.getElementById('input-gmaps-key').value;
+
+      try {
+        const res = await fetch('/api/admin/api-keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            mapmyindiaClientId: mmiId, 
+            mapmyindiaClientSecret: mmiSecret,
+            googleMapsApiKey: gmaps 
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          savedApiKeys = data.keys;
+          updateApiKeyBadges();
+          showToast("API Credentials saved successfully!");
+        }
+      } catch (_) {
+        showToast("Error saving API credentials.");
+      }
+    }
+
+    async function testApiKey(keyType) {
+      let payload = { keyType };
+      if (keyType === 'mapmyindia') {
+        payload.clientId = document.getElementById('input-mmi-client-id').value;
+        payload.clientSecret = document.getElementById('input-mmi-client-secret').value;
+        if (!payload.clientId || !payload.clientId.trim()) return alert("Please enter MapMyIndia Client ID / API Key to test.");
+      } else {
+        payload.apiKey = document.getElementById('input-gmaps-key').value;
+        if (!payload.apiKey || !payload.apiKey.trim()) return alert("Please enter Google Maps API Key to test.");
+      }
+
+      const btn = keyType === 'mapmyindia' ? document.getElementById('test-mmi-btn') : document.getElementById('test-gmaps-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing Connection...';
+
+      try {
+        const res = await fetch('/api/admin/test-api-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`✅ Connection Verified: ${data.message}`);
+        } else {
+          alert(`❌ Connection Failed: ${data.message || 'Invalid API Key / Credentials'}`);
+        }
+      } catch (err) {
+        alert(`❌ Network error while testing API Key: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-vial"></i> Test API Connection';
+      }
     }
 
     function selectAggOption(option) {
@@ -903,9 +1027,18 @@
     }
 
     async function triggerDirectoryFetch() {
+      const hasMMI = savedApiKeys.mapmyindiaClientId && savedApiKeys.mapmyindiaClientId.trim().length > 3;
+      const hasGoogle = savedApiKeys.googleMapsApiKey && savedApiKeys.googleMapsApiKey.trim().length > 5;
+
+      if (!hasMMI && !hasGoogle) {
+        alert("MapMyIndia (Mappls) or Google Maps API Key is missing. Please save valid credentials in the 'API Settings & Credentials' tab first.");
+        switchTab('api-keys-tab', document.querySelectorAll('.tab-button')[1]);
+        return;
+      }
+
       const btn = document.getElementById('agg-trigger-btn');
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Aggregating Data...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Executing API Places Fetch...';
 
       const pincode = document.getElementById('agg-pincode').value;
       const category = document.getElementById('agg-category').value;
@@ -921,16 +1054,18 @@
           })
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          showToast(data.message || "Data aggregation complete!");
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          showToast(data.message || "Data fetch complete!");
           loadDirectory();
+        } else {
+          alert(`Error: ${data.message || 'Failed to fetch places data'}`);
         }
       } catch (err) {
-        showToast("Error executing data aggregation.");
+        showToast("Error executing API data fetch.");
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Trigger Data Aggregation Engine';
+        btn.innerHTML = '<i class="fa-solid fa-map-location-dot"></i> Fetch Live MapMyIndia Places';
       }
     }
 
@@ -949,26 +1084,26 @@
       const totalBadge = document.getElementById('directory-total-badge');
       const cardBadge = document.getElementById('directory-count-card');
       
-      if (totalBadge) totalBadge.innerText = `${list.length} Total Listings`;
+      if (totalBadge) totalBadge.innerText = `${list.length} Real Listings`;
       if (cardBadge) cardBadge.innerText = list.length;
       if (!tbody) return;
 
       tbody.innerHTML = '';
 
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No directory records found. Click "Trigger Data Aggregation Engine" above.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No directory records. Configure MapMyIndia credentials in "API Settings" and click "Fetch Live MapMyIndia Places".</td></tr>';
         return;
       }
 
       list.forEach(item => {
         const tr = document.createElement('tr');
         const secCatBadges = (item.secondaryCategories || [item.category]).map(c => `<span class="badge badge-secondary" style="font-size: 9px; margin-right: 4px; margin-top: 2px;">${escapeHtml(c)}</span>`).join('');
-        const mapUrl = item.mapUrl || `https://maps.google.com/?q=${item.latitude},${item.longitude}`;
+        const mapUrl = item.mapUrl || item.websiteUrl || `https://www.mappls.com/${item.eLoc || item.id}`;
 
         tr.innerHTML = `
           <td>
             <div style="font-weight: 700; color: #ffffff; font-size: 13px;">${escapeHtml(item.name)}</div>
-            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">ID: ${escapeHtml(item.id)}</div>
+            <div style="font-size: 10px; color: var(--secondary); font-weight: bold; margin-top: 2px; font-family: monospace;">eLoc / ID: ${escapeHtml(item.eLoc || item.id)}</div>
           </td>
           <td>
             <div><span class="badge">${escapeHtml(item.category)}</span></div>
@@ -981,23 +1116,17 @@
           </td>
           <td>
             <div style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${item.latitude || 9.93}, ${item.longitude || 76.26}</div>
-            <a href="${mapUrl}" target="_blank" style="font-size: 10px; color: var(--primary); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px;">
-              <i class="fa-solid fa-map-location-dot"></i> View Map
+            <a href="${mapUrl}" target="_blank" style="font-size: 10px; color: var(--secondary); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px;">
+              <i class="fa-solid fa-map-location-dot"></i> View on MapMyIndia
             </a>
           </td>
           <td>
             <div style="color: var(--warning); font-weight: bold; font-size: 13px;">★ ${item.rating || 4.5}</div>
-            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${item.reviewCount || 45} reviews</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${item.reviewCount || 15} reviews</div>
           </td>
           <td>
             <div style="font-size: 11px; color: #ffffff; font-weight: 500;">${escapeHtml(item.workingHours || '08:00 AM - 08:00 PM')}</div>
-            <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-top: 2px;">● Open Now</div>
-          </td>
-          <td>
-            <div style="display: flex; gap: 6px;">
-              <button class="btn btn-secondary" onclick="openEditBusinessModal('${item.id}')" style="padding: 4px 8px; font-size: 11px;" title="Edit Record"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn btn-secondary" onclick="deleteBusinessRecord('${item.id}')" style="padding: 4px 8px; font-size: 11px; color: var(--error);" title="Delete Record"><i class="fa-solid fa-trash"></i></button>
-            </div>
+            <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-top: 2px;">● Verified Place</div>
           </td>
         `;
         tbody.appendChild(tr);
@@ -1011,82 +1140,10 @@
         item.category.toLowerCase().includes(query) ||
         item.pincode.includes(query) ||
         (item.city && item.city.toLowerCase().includes(query)) ||
-        (item.address && item.address.toLowerCase().includes(query))
+        (item.address && item.address.toLowerCase().includes(query)) ||
+        (item.eLoc && item.eLoc.toLowerCase().includes(query))
       );
       renderDirectoryTable(filtered);
-    }
-
-    function openAddBusinessModal() {
-      document.getElementById('modal-title').innerText = 'Add Business Listing';
-      document.getElementById('modal-biz-id').value = '';
-      document.getElementById('modal-biz-name').value = '';
-      document.getElementById('modal-biz-cat').value = 'Electricians';
-      document.getElementById('modal-biz-pin').value = '682020';
-      document.getElementById('modal-biz-phone').value = '+91 9847123456';
-      document.getElementById('modal-biz-city').value = 'Kochi';
-      document.getElementById('modal-biz-addr').value = 'Main Road, Vyttila, Kochi';
-      document.getElementById('biz-modal').classList.add('open');
-    }
-
-    function openEditBusinessModal(id) {
-      const item = directoryList.find(b => b.id === id);
-      if (!item) return;
-      document.getElementById('modal-title').innerText = 'Edit Business Listing';
-      document.getElementById('modal-biz-id').value = item.id;
-      document.getElementById('modal-biz-name').value = item.name;
-      document.getElementById('modal-biz-cat').value = item.category;
-      document.getElementById('modal-biz-pin').value = item.pincode;
-      document.getElementById('modal-biz-phone').value = item.phone;
-      document.getElementById('modal-biz-city').value = item.city || 'Kochi';
-      document.getElementById('modal-biz-addr').value = item.address;
-      document.getElementById('biz-modal').classList.add('open');
-    }
-
-    function closeBusinessModal() {
-      document.getElementById('biz-modal').classList.remove('open');
-    }
-
-    async function saveBusinessRecord() {
-      const id = document.getElementById('modal-biz-id').value;
-      const name = document.getElementById('modal-biz-name').value;
-      const cat = document.getElementById('modal-biz-cat').value;
-      const pin = document.getElementById('modal-biz-pin').value;
-      const phone = document.getElementById('modal-biz-phone').value;
-      const city = document.getElementById('modal-biz-city').value;
-      const addr = document.getElementById('modal-biz-addr').value;
-
-      if (!name || !pin) return alert("Business name and pincode are required.");
-
-      const payload = { name, category: cat, pincode: pin, phone, city, address: addr };
-
-      try {
-        const url = id ? `/api/directory/${id}` : '/api/directory';
-        const method = id ? 'PUT' : 'POST';
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          showToast(id ? "Record updated!" : "Record created!");
-          closeBusinessModal();
-          loadDirectory();
-        }
-      } catch (_) {
-        showToast("Error saving record.");
-      }
-    }
-
-    async function deleteBusinessRecord(id) {
-      if (!confirm("Are you sure you want to delete this business record?")) return;
-      try {
-        const res = await fetch(`/api/directory/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          showToast("Business record deleted.");
-          loadDirectory();
-        }
-      } catch (_) {}
     }
 
     async function loadBanners() {
@@ -1325,7 +1382,7 @@
     function initWebSocket() {
       try {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}?token=admin_console`);
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -1344,6 +1401,7 @@
     }
 
     // Initialize
+    loadApiKeys();
     loadAnalytics();
     loadDirectory();
     loadBanners();
