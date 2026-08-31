@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
+const crypto = require('crypto');
 const admin = require('firebase-admin');
 const bigQueryService = require('./bigquery_service');
 
@@ -27,8 +28,6 @@ try {
     db = admin.database();
     console.log("Firebase Admin SDK: Initialized with Application Default Credentials");
   } else {
-    console.warn("Firebase Admin SDK: service-account.json and GOOGLE_APPLICATION_CREDENTIALS not found.");
-    console.warn("Initializing Admin SDK without explicit auth (relying on open database rules)...");
     admin.initializeApp({
       databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app'
     });
@@ -36,12 +35,15 @@ try {
     console.log("Firebase Admin SDK: Initialized without explicit credential (open rules)");
   }
 } catch (err) {
-  console.warn("Firebase Admin SDK Warning: Failed to initialize Admin SDK:", err.message);
-  console.warn("Continuing... Server will fallback to REST fetch for Firebase RTDB sync operations.");
+  console.warn("Firebase Admin SDK Warning: Fallback to REST fetch for Firebase RTDB sync operations:", err.message);
 }
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const SHARED_APP_SECRET = 'meetly_secure_secret_2026';
+
+// In-Memory Valid Handshake Session Tokens Store (Token -> Session Info)
+const validHandshakeTokens = new Map();
 
 // File databases
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
@@ -58,10 +60,50 @@ const FIREBASE_WS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.fireb
 const FIREBASE_BANNERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/banners.json';
 const FIREBASE_CATEGORIES_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/categories.json';
 const FIREBASE_BOOKINGS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/bookings.json';
+const FIREBASE_PROVIDERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/providers.json';
+const FIREBASE_USERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/users.json';
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- SECURE HANDSHAKE ENDPOINT ---
+app.post('/api/v1/auth/handshake', (req, res) => {
+  const clientSecret = req.headers['x-app-secret'];
+  const { userId, deviceId } = req.body;
+
+  if (!clientSecret || clientSecret !== SHARED_APP_SECRET) {
+    console.warn(`[Handshake Security Guard] Unauthorized handshake attempt from IP ${req.ip} (Invalid X-App-Secret)`);
+    return res.status(401).json({ status: "error", message: "Unauthorized: Invalid application client secret header" });
+  }
+
+  if (!userId || !deviceId) {
+    return res.status(400).json({ status: "error", message: "BadRequest: Missing userId or deviceId parameter" });
+  }
+
+  // Generate cryptographically secure Session Key
+  const tokenBytes = crypto.randomBytes(24).toString('hex');
+  const sessionKey = `sess_${tokenBytes}`;
+  const now = Date.now();
+
+  const tokenPayload = {
+    sessionKey,
+    userId,
+    deviceId,
+    clientIp: req.ip || req.socket.remoteAddress || '127.0.0.1',
+    issuedAt: now,
+    expiresAt: now + 24 * 60 * 60 * 1000 // 24 hours
+  };
+
+  validHandshakeTokens.set(sessionKey, tokenPayload);
+  console.log(`[Handshake API] Issued verified Session Key "${sessionKey}" for User "${userId}" on Device "${deviceId}"`);
+
+  res.json({
+    status: "success",
+    sessionKey: sessionKey,
+    serverTimestamp: now
+  });
+});
 
 // --- DEFAULT SEED DATA ---
 const defaultSettings = {
@@ -114,9 +156,7 @@ const defaultProviders = [
     startingPrice: 199.0,
     verified: true,
     bio: 'Providing safe, certified electrical installations, rewiring, and appliance repair services in Kochi for over 8 years.',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600'
-    ],
+    portfolioImages: ['https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600'],
     workingHours: {
       'Mon': {'available': true, 'start': '09:00', 'end': '19:00'},
       'Tue': {'available': true, 'start': '09:00', 'end': '19:00'},
@@ -131,31 +171,6 @@ const defaultProviders = [
     category: 'Electrical',
     phone: '+91 9895100002',
     location: 'Kochi',
-    verificationStatus: 'verified'
-  },
-  {
-    id: 'p2',
-    userId: 'up6',
-    businessName: 'Anil Electrical Works',
-    profession: 'Residential Wiring Contractor',
-    rating: 4.6,
-    reviewCount: 78,
-    distance: 2.8,
-    startingPrice: 249.0,
-    verified: true,
-    bio: 'Affordable home electrical services including fans, lights, switchboards, and fault finding.',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600'
-    ],
-    workingHours: {
-      'Mon': {'available': true, 'start': '08:30', 'end': '18:00'},
-      'Tue': {'available': true, 'start': '08:30', 'end': '18:00'}
-    },
-    serviceArea: 'Kottayam & Kumarakom',
-    responseTime: 'Within 1 hour',
-    category: 'Electrical',
-    phone: '+91 9895100006',
-    location: 'Kottayam',
     verificationStatus: 'verified'
   }
 ];
@@ -236,17 +251,168 @@ async function syncToFirebase(pathOrUrl, data) {
 
 // --- CREATE HTTP SERVER & WEBSOCKET ENGINE ---
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
 
-const connectedClientsMap = new Map();
+// --- IN-MEMORY ACTIVE SESSION MANAGER & HEARTBEAT PROTOCOL ---
+class ActiveSessionManager {
+  constructor() {
+    this.sessions = new Map(); // ws -> Session metadata
+    this.heartbeatIntervalMs = 15000;
+    this.maxMissedPings = 2; // Evict if client misses 2 consecutive pings (30s)
 
-function getConnectedDevicesList() {
-  const devices = [];
-  connectedClientsMap.forEach((info) => {
-    devices.push(info);
-  });
-  return devices;
+    // Audit heartbeats periodically
+    setInterval(() => this._auditHeartbeats(), this.heartbeatIntervalMs);
+  }
+
+  register(ws, tokenPayload, req) {
+    const clientIp = (req && req.socket && req.socket.remoteAddress) ? req.socket.remoteAddress : '127.0.0.1';
+    const isAdminConsole = (tokenPayload.userId === 'admin_web_console') || 
+                           (tokenPayload.deviceId && tokenPayload.deviceId.includes('admin_console'));
+
+    const session = {
+      ws,
+      sessionKey: tokenPayload.sessionKey,
+      userId: tokenPayload.userId || 'verified_user',
+      deviceId: tokenPayload.deviceId || 'dev_authenticated',
+      deviceName: 'Flutter Application',
+      platform: 'Mobile / Desktop',
+      ip: clientIp,
+      connectedAt: new Date().toISOString(),
+      lastPingAt: Date.now(),
+      isAdminConsole: isAdminConsole,
+    };
+
+    this.sessions.set(ws, session);
+    if (!isAdminConsole) {
+      console.log(`[ActiveSessionManager] Verified Flutter App Connected (${session.deviceId} / User: ${session.userId}). Total Active Apps: ${this.totalConnectedDevices}`);
+    } else {
+      console.log(`[ActiveSessionManager] Admin Web Console Telemetry Stream Attached.`);
+    }
+    return session;
+  }
+
+  identify(ws, payload) {
+    const session = this.sessions.get(ws);
+    if (!session) return;
+    session.deviceId = payload.deviceId || session.deviceId;
+    session.userId = payload.userId || session.userId;
+    session.deviceName = payload.deviceName || session.deviceName;
+    session.platform = payload.platform || session.platform;
+    session.connectedAt = payload.connectedAt || session.connectedAt;
+    session.lastPingAt = Date.now();
+    if (!session.isAdminConsole) {
+      console.log(`[ActiveSessionManager] Identified Verified Device (${session.deviceId} - ${session.deviceName})`);
+    }
+  }
+
+  recordPing(ws) {
+    const session = this.sessions.get(ws);
+    if (session) {
+      session.lastPingAt = Date.now();
+    }
+  }
+
+  unregister(ws) {
+    const session = this.sessions.get(ws);
+    if (session) {
+      this.sessions.delete(ws);
+      if (!session.isAdminConsole) {
+        console.log(`[ActiveSessionManager] Verified App Session Evicted (${session.deviceId}). Total Active Apps: ${this.totalConnectedDevices}`);
+      }
+    }
+  }
+
+  getConnectedDevicesList() {
+    const list = [];
+    this.sessions.forEach((s) => {
+      if (!s.isAdminConsole) {
+        list.push({
+          deviceId: s.deviceId,
+          userId: s.userId,
+          deviceName: s.deviceName,
+          platform: s.platform,
+          ip: s.ip,
+          connectedAt: s.connectedAt,
+          lastPingAt: s.lastPingAt,
+        });
+      }
+    });
+    return list;
+  }
+
+  get totalConnectedDevices() {
+    let count = 0;
+    this.sessions.forEach((s) => {
+      if (!s.isAdminConsole) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  _auditHeartbeats() {
+    const now = Date.now();
+    let evictedCount = 0;
+    this.sessions.forEach((session, ws) => {
+      if (now - session.lastPingAt > this.heartbeatIntervalMs * this.maxMissedPings) {
+        console.warn(`[ActiveSessionManager] Evicting stagnant device session ${session.deviceId} due to 2 missed heartbeats.`);
+        try {
+          ws.terminate();
+        } catch (_) {}
+        this.sessions.delete(ws);
+        evictedCount++;
+      }
+    });
+
+    if (evictedCount > 0) {
+      broadcastAnalytics();
+    }
+  }
 }
+
+const sessionManager = new ActiveSessionManager();
+
+// --- WEBSOCKET AUTHENTICATION GUARD ON HTTP UPGRADE ---
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    const token = requestUrl.searchParams.get('token');
+
+    // Admin Console Browser WebSockets or handshake authenticated tokens
+    const isWebAdminConsole = request.headers['user-agent'] && request.headers['user-agent'].includes('Mozilla');
+
+    if (!token && !isWebAdminConsole) {
+      console.warn(`[WebSocket Auth Guard] Rejected unauthenticated connection attempt (Missing token parameter)`);
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    let tokenPayload = null;
+    if (token) {
+      tokenPayload = validHandshakeTokens.get(token);
+      if (!tokenPayload) {
+        console.warn(`[WebSocket Auth Guard] Rejected invalid/expired token connection attempt: "${token}"`);
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+    } else {
+      tokenPayload = {
+        sessionKey: 'admin_console_' + Date.now(),
+        userId: 'admin_web_console',
+        deviceId: 'dev_admin_console',
+      };
+    }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request, tokenPayload);
+    });
+  } catch (err) {
+    socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
+    socket.destroy();
+  }
+});
 
 function computeAnalytics() {
   const users = readJsonFile(USERS_FILE, defaultUsers);
@@ -269,10 +435,11 @@ function computeAnalytics() {
     .reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
   const avgTicketSize = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
-  const connectedDevices = getConnectedDevicesList();
+  const connectedDevices = sessionManager.getConnectedDevicesList();
 
   return {
-    activeConnections: connectedClientsMap.size,
+    activeConnections: sessionManager.totalConnectedDevices,
+    totalConnectedDevices: sessionManager.totalConnectedDevices,
     connectedDevices: connectedDevices,
     totalUsers,
     customerCount,
@@ -307,22 +474,10 @@ function broadcastAnalytics() {
   });
 }
 
-wss.on('connection', (ws, req) => {
-  const clientIp = (req && req.socket && req.socket.remoteAddress) ? req.socket.remoteAddress : '127.0.0.1';
-  const defaultClientId = 'dev_' + Math.random().toString(36).substring(2, 9);
-  
-  const initialInfo = {
-    deviceId: defaultClientId,
-    deviceName: 'Flutter Client Session',
-    platform: 'Mobile / Desktop',
-    ip: clientIp,
-    connectedAt: new Date().toISOString()
-  };
+wss.on('connection', (ws, req, tokenPayload) => {
+  sessionManager.register(ws, tokenPayload, req);
 
-  connectedClientsMap.set(ws, initialInfo);
-  console.log(`[WebSocket] Client Connected (${initialInfo.deviceId}). Live Active Connections: ${connectedClientsMap.size}`);
-
-  // Send initial state immediately upon connection
+  // Send initial state immediately upon authenticated connection
   ws.send(JSON.stringify({
     type: 'ADMIN_TELEMETRY',
     data: computeAnalytics()
@@ -333,18 +488,10 @@ wss.on('connection', (ws, req) => {
   ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message.toString());
-      console.log('[WebSocket] Received Inbound Action:', data.type);
+      sessionManager.recordPing(ws);
 
       if (data.type === 'CLIENT_IDENTIFY') {
-        const existing = connectedClientsMap.get(ws) || {};
-        connectedClientsMap.set(ws, {
-          ...existing,
-          deviceId: data.deviceId || existing.deviceId,
-          deviceName: data.deviceName || existing.deviceName,
-          platform: data.platform || existing.platform,
-          connectedAt: data.connectedAt || existing.connectedAt
-        });
-        console.log(`[WebSocket] Device Identified: ${data.deviceId} (${data.deviceName})`);
+        sessionManager.identify(ws, data);
         broadcastAnalytics();
       } else if (data.type === 'PING') {
         ws.send(JSON.stringify({ type: 'PONG', timestamp: new Date().toISOString() }));
@@ -392,9 +539,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    const info = connectedClientsMap.get(ws);
-    connectedClientsMap.delete(ws);
-    console.log(`[WebSocket] Client Disconnected (${info ? info.deviceId : 'unknown'}). Live Active Connections: ${connectedClientsMap.size}`);
+    sessionManager.unregister(ws);
     broadcastAnalytics();
   });
 });
@@ -430,7 +575,9 @@ app.get('/api/analytics/overview', async (req, res) => {
   const endDate = req.query.endDate || new Date().toISOString().split('T')[0];
   try {
     const data = await bigQueryService.getOverviewMetrics(startDate, endDate);
-    data.activeConnections = activeConnections;
+    data.activeConnections = sessionManager.totalConnectedDevices;
+    data.totalConnectedDevices = sessionManager.totalConnectedDevices;
+    data.connectedDevices = sessionManager.getConnectedDevicesList();
     res.json(data);
   } catch (err) {
     res.json(computeAnalytics());
@@ -442,7 +589,7 @@ app.get('/api/analytics/categories', async (req, res) => {
     const data = await bigQueryService.getCategoryClicksDistribution();
     res.json(data);
   } catch (err) {
-    res.json({ Cleaning: 45, Plumbing: 30, Electrical: 65, Appliance: 25 });
+    res.json([]);
   }
 });
 
@@ -505,67 +652,47 @@ app.post('/api/banners', async (req, res) => {
     banner.id = 'b_' + Math.random().toString(36).substr(2, 9);
     banners.push(banner);
   } else {
-    const index = banners.findIndex(b => b.id === banner.id);
-    if (index !== -1) banners[index] = { ...banners[index], ...banner };
-    else banners.push(banner);
+    const idx = banners.findIndex(b => b.id === banner.id);
+    if (idx !== -1) {
+      banners[idx] = banner;
+    } else {
+      banners.push(banner);
+    }
   }
   writeJsonFile(BANNERS_FILE, banners);
-  const synced = await syncToFirebase(FIREBASE_BANNERS_URL, banners);
-  res.json({ message: "Banner saved successfully", banner, firebaseSynced: synced, banners });
+  await syncToFirebase(FIREBASE_BANNERS_URL, banners);
+  broadcastAnalytics();
+  res.json({ message: "Banner saved", banners });
 });
 
 app.delete('/api/banners/:id', async (req, res) => {
   const banners = readJsonFile(BANNERS_FILE, defaultBanners);
-  const toDelete = req.params.id;
-  const filtered = banners.filter(b => b.id !== toDelete);
+  const idToDelete = req.params.id;
+  const filtered = banners.filter(b => b.id !== idToDelete);
   writeJsonFile(BANNERS_FILE, filtered);
-  const synced = await syncToFirebase(FIREBASE_BANNERS_URL, filtered);
-  res.json({ message: "Banner deleted successfully", firebaseSynced: synced, banners: filtered });
-});
-
-app.get('/api/providers', (req, res) => {
-  res.json(readJsonFile(PROVIDERS_FILE, defaultProviders));
-});
-
-app.get('/api/providers/:id', (req, res) => {
-  const providers = readJsonFile(PROVIDERS_FILE, defaultProviders);
-  const provider = providers.find(p => p.id === req.params.id);
-  if (provider) res.json(provider);
-  else res.status(404).json({ error: "Provider not found" });
-});
-
-app.post('/api/providers', async (req, res) => {
-  const providers = readJsonFile(PROVIDERS_FILE, defaultProviders);
-  const updatedProvider = req.body;
-  if (!updatedProvider || !updatedProvider.id) return res.status(400).json({ error: "Provider details with ID are required" });
-  const index = providers.findIndex(p => p.id === updatedProvider.id);
-  if (index !== -1) providers[index] = { ...providers[index], ...updatedProvider };
-  else providers.push(updatedProvider);
-  writeJsonFile(PROVIDERS_FILE, providers);
-  const synced = await syncToFirebase('providers', providers);
+  await syncToFirebase(FIREBASE_BANNERS_URL, filtered);
   broadcastAnalytics();
-  res.json({ message: "Provider profile updated", provider: updatedProvider, firebaseSynced: synced });
+  res.json({ message: "Banner deleted", banners: filtered });
 });
 
-app.get('/api/bookings', (req, res) => {
-  res.json(readJsonFile(BOOKINGS_FILE, defaultBookings));
-});
-
-// --- PUBLISH SERVER & WEBSOCKET URLS TO FIREBASE ON STARTUP ---
+// START SERVER & PUBLISH DISCOVERY ADDRESS TO FIREBASE RTDB
 server.listen(PORT, async () => {
-  const hostUrl = `http://localhost:${PORT}`;
-  const wsUrl = `ws://localhost:${PORT}`;
-  console.log(`Meetly Server & WebSocket running on ${hostUrl} (${wsUrl})`);
+  console.log(`Meetly Server & WebSocket running on http://localhost:${PORT} (ws://localhost:${PORT})`);
   
+  // Publish Dynamic Server IP to Firebase RTDB Discovery Layer
+  const localIp = 'localhost'; 
+  const serverHttpUrl = `http://${localIp}:${PORT}`;
+  const serverWsUrl = `ws://${localIp}:${PORT}`;
+
   console.log("Publishing dynamic server IP and WebSocket URL to Firebase Realtime Database...");
-  await syncToFirebase('server_url', hostUrl);
-  await syncToFirebase('ws_url', wsUrl);
+  await syncToFirebase(FIREBASE_SERVER_URL, serverHttpUrl);
+  await syncToFirebase(FIREBASE_WS_URL, serverWsUrl);
 
   console.log("Syncing baseline databases to Firebase RTDB nodes...");
-  await syncToFirebase('settings', readJsonFile(SETTINGS_FILE, defaultSettings));
-  await syncToFirebase('categories', readJsonFile(CATEGORIES_FILE, defaultCategories));
-  await syncToFirebase('providers', readJsonFile(PROVIDERS_FILE, defaultProviders));
-  await syncToFirebase('banners', readJsonFile(BANNERS_FILE, defaultBanners));
-  await syncToFirebase('bookings', readJsonFile(BOOKINGS_FILE, defaultBookings));
-  await syncToFirebase('users', readJsonFile(USERS_FILE, defaultUsers));
+  await syncToFirebase(FIREBASE_SETTINGS_URL, readJsonFile(SETTINGS_FILE, defaultSettings));
+  await syncToFirebase(FIREBASE_CATEGORIES_URL, readJsonFile(CATEGORIES_FILE, defaultCategories));
+  await syncToFirebase(FIREBASE_PROVIDERS_URL, readJsonFile(PROVIDERS_FILE, defaultProviders));
+  await syncToFirebase(FIREBASE_BANNERS_URL, readJsonFile(BANNERS_FILE, defaultBanners));
+  await syncToFirebase(FIREBASE_BOOKINGS_URL, readJsonFile(BOOKINGS_FILE, defaultBookings));
+  await syncToFirebase(FIREBASE_USERS_URL, readJsonFile(USERS_FILE, defaultUsers));
 });

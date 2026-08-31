@@ -5,139 +5,126 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import '../models/device_session_model.dart';
 import '../database/local_database.dart';
+import 'auth_handshake_service.dart';
 
-// Helper to resolve Firebase RTDB
-FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
-      app: Firebase.app(),
-      databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
-    );
+// Backward compatibility typedefs
+typedef AdminTelemetryData = SystemTelemetryModel;
+typedef DeviceSessionInfo = DeviceSessionModel;
 
-// Model for Real-time System Analytics
-class AdminTelemetryData {
-  final int activeConnections;
-  final int totalUsers;
-  final int customerCount;
-  final int providerCount;
-  final int totalBookings;
-  final Map<String, int> bookingMetrics;
-  final double totalRevenue;
-  final double avgTicketSize;
-  final String currency;
-  final String timestamp;
-  final bool isConnected;
-
-  AdminTelemetryData({
-    required this.activeConnections,
-    required this.totalUsers,
-    required this.customerCount,
-    required this.providerCount,
-    required this.totalBookings,
-    required this.bookingMetrics,
-    required this.totalRevenue,
-    required this.avgTicketSize,
-    required this.currency,
-    required this.timestamp,
-    this.isConnected = true,
-  });
-
-  factory AdminTelemetryData.fallbackOffline() {
-    return AdminTelemetryData(
-      activeConnections: 0,
-      totalUsers: 8,
-      customerCount: 3,
-      providerCount: 4,
-      totalBookings: 5,
-      bookingMetrics: {
-        'pending': 1,
-        'confirmed': 1,
-        'inProgress': 1,
-        'completed': 2,
-        'cancelled': 0,
-      },
-      totalRevenue: 2946.0,
-      avgTicketSize: 589.0,
-      currency: "INR",
-      timestamp: DateTime.now().toIso8601String(),
-      isConnected: false,
-    );
-  }
-
-  factory AdminTelemetryData.fromJson(Map<String, dynamic> json, {bool isConnected = true}) {
-    final bMetrics = json['bookingMetrics'] as Map<String, dynamic>? ?? {};
-    final rMetrics = json['revenueMetrics'] as Map<String, dynamic>? ?? {};
-
-    return AdminTelemetryData(
-      activeConnections: (json['activeConnections'] as num?)?.toInt() ?? 0,
-      totalUsers: (json['totalUsers'] as num?)?.toInt() ?? 0,
-      customerCount: (json['customerCount'] as num?)?.toInt() ?? 0,
-      providerCount: (json['providerCount'] as num?)?.toInt() ?? 0,
-      totalBookings: (json['totalBookings'] as num?)?.toInt() ?? 0,
-      bookingMetrics: {
-        'pending': (bMetrics['pending'] as num?)?.toInt() ?? 0,
-        'confirmed': (bMetrics['confirmed'] as num?)?.toInt() ?? 0,
-        'inProgress': (bMetrics['inProgress'] as num?)?.toInt() ?? 0,
-        'completed': (bMetrics['completed'] as num?)?.toInt() ?? 0,
-        'cancelled': (bMetrics['cancelled'] as num?)?.toInt() ?? 0,
-      },
-      totalRevenue: (rMetrics['totalRevenue'] as num?)?.toDouble() ?? 0.0,
-      avgTicketSize: (rMetrics['avgTicketSize'] as num?)?.toDouble() ?? 0.0,
-      currency: rMetrics['currency']?.toString() ?? "INR",
-      timestamp: json['timestamp']?.toString() ?? DateTime.now().toIso8601String(),
-      isConnected: isConnected,
-    );
-  }
-}
-
-// Global Provider for RealtimeWebSocketService
+// Global Riverpod Provider for RealtimeWebSocketService
 final realtimeWebSocketServiceProvider = Provider<RealtimeWebSocketService>((ref) {
   final service = RealtimeWebSocketService();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
-// Provider exposing Stream of Admin Telemetry
-final adminTelemetryStreamProvider = StreamProvider<AdminTelemetryData>((ref) {
+// StreamProvider for System Telemetry
+final adminTelemetryStreamProvider = StreamProvider<SystemTelemetryModel>((ref) {
   final service = ref.watch(realtimeWebSocketServiceProvider);
   return service.telemetryStream;
 });
 
 class RealtimeWebSocketService {
   WebSocketChannel? _channel;
-  final StreamController<AdminTelemetryData> _telemetryController =
-      StreamController<AdminTelemetryData>.broadcast();
+  final StreamController<SystemTelemetryModel> _telemetryController =
+      StreamController<SystemTelemetryModel>.broadcast();
 
   Timer? _reconnectTimer;
   Timer? _pingTimer;
+  StreamSubscription? _discoverySubscription;
   bool _isConnected = false;
   String? _resolvedWsUrl;
+  String? _resolvedHttpUrl;
+  String? _sessionKey;
+  
+  final String _deviceId = 'dev_${kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch % 10000}';
+  final String _userId = 'usr_mobile_client';
 
-  Stream<AdminTelemetryData> get telemetryStream => _telemetryController.stream;
+  Stream<SystemTelemetryModel> get telemetryStream => _telemetryController.stream;
   bool get isConnected => _isConnected;
   String? get currentWsUrl => _resolvedWsUrl;
+  String get deviceId => _deviceId;
 
   RealtimeWebSocketService() {
     _initConnection();
+    _listenToDynamicServiceDiscovery();
+  }
+
+  // Listens to Firebase RTDB Discovery Layer for dynamic server IP / URL changes
+  void _listenToDynamicServiceDiscovery() {
+    try {
+      final dbRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
+      ).ref('ws_url');
+
+      _discoverySubscription = dbRef.onValue.listen((event) {
+        if (event.snapshot.exists && event.snapshot.value != null) {
+          final newWsUrl = event.snapshot.value.toString();
+          if (newWsUrl.isNotEmpty && newWsUrl != _resolvedWsUrl) {
+            if (kDebugMode) {
+              print("RealtimeWS: Dynamic Discovery updated URL to $newWsUrl. Terminating stale connection & reconnecting...");
+            }
+            _reconnectWithUrl(newWsUrl);
+          }
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print("RealtimeWS: Discovery listener error: $e");
+      }
+    }
+  }
+
+  Future<void> _reconnectWithUrl(String wsUrl) async {
+    _channel?.sink.close();
+    _isConnected = false;
+    _resolvedWsUrl = wsUrl;
+    await _initConnection();
   }
 
   Future<void> _initConnection() async {
-    final wsUrl = await _resolveDynamicWsUrl();
-    _resolvedWsUrl = wsUrl;
+    final urls = await _resolveDynamicUrls();
+    _resolvedHttpUrl = urls['http'];
+    _resolvedWsUrl = urls['ws'];
 
-    if (wsUrl == null || wsUrl.isEmpty) {
-      if (kDebugMode) {
-        print("RealtimeWS: Could not resolve dynamic WS URL. Using fallback offline state.");
-      }
-      _telemetryController.add(AdminTelemetryData.fallbackOffline());
+    if (_resolvedHttpUrl == null || _resolvedWsUrl == null) {
+      _telemetryController.add(SystemTelemetryModel.fallbackOffline());
       _scheduleReconnect();
       return;
     }
 
+    // Step 1 & 2: REST Handshake & Key Authentication
+    final handshakeRes = await AuthHandshakeService.performHandshake(
+      serverBaseUrl: _resolvedHttpUrl!,
+      userId: _userId,
+      deviceId: _deviceId,
+    );
+
+    if (!handshakeRes.isSuccess || handshakeRes.sessionKey.isEmpty) {
+      if (kDebugMode) {
+        print("RealtimeWS: REST Handshake rejected: ${handshakeRes.errorMessage}");
+      }
+      _telemetryController.add(SystemTelemetryModel.fallbackOffline());
+      _scheduleReconnect();
+      return;
+    }
+
+    _sessionKey = handshakeRes.sessionKey;
+
+    // Step 3: Establish Authenticated Direct WebSocket Connection
+    final authenticatedWsUri = '${_resolvedWsUrl!}/ws/live?token=$_sessionKey';
+    await _connectToWs(authenticatedWsUri);
+  }
+
+  Future<void> _connectToWs(String authenticatedWsUri) async {
     try {
       if (kDebugMode) {
-        print("RealtimeWS: Connecting direct WebSocket to $wsUrl...");
+        print("RealtimeWS: Connecting authenticated WebSocket ($authenticatedWsUri)...");
       }
-      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel = WebSocketChannel.connect(Uri.parse(authenticatedWsUri));
       _isConnected = true;
 
       _channel!.stream.listen(
@@ -158,19 +145,20 @@ class RealtimeWebSocketService {
         },
       );
 
-      // Start ping heartbeat
+      // Start periodic 15s Heartbeat Ping/Pong Protocol
       _startHeartbeat();
 
-      // Send client identification for live device tracking in Admin Panel
+      // Transmit client identification over secure channel
       final platformName = kIsWeb ? 'Web Browser' : defaultTargetPlatform.name;
       sendAction('CLIENT_IDENTIFY', {
-        'deviceId': 'dev_${platformName.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch % 10000}',
+        'deviceId': _deviceId,
+        'userId': _userId,
         'deviceName': kIsWeb ? 'Meetly Web Client' : 'RMX3686 (Realme 10 Pro+ 5G)',
         'platform': platformName,
         'connectedAt': DateTime.now().toIso8601String(),
       });
 
-      // Flush queued offline items upon connection
+      // Flush pending offline queue upon connection
       flushOfflineQueue();
 
     } catch (e) {
@@ -182,40 +170,28 @@ class RealtimeWebSocketService {
   }
 
   // Resolves the dynamic server IP / WebSocket URL from Firebase Realtime Database
-  Future<String?> _resolveDynamicWsUrl() async {
+  Future<Map<String, String>> _resolveDynamicUrls() async {
+    String httpUrl = 'http://localhost:5000';
+    String wsUrl = 'ws://localhost:5000';
+
     try {
-      // 1. Try Firebase RTDB /ws_url node first
-      final dbRef = _database.ref('ws_url');
-      final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
-      if (snapshot.exists && snapshot.value != null) {
-        final val = snapshot.value.toString();
-        if (val.isNotEmpty) {
-          if (kDebugMode) {
-            print("RealtimeWS: Dynamic WS URL resolved from Firebase RTDB: $val");
-          }
-          return val;
-        }
+      final db = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
+      );
+
+      final wsSnap = await db.ref('ws_url').get().timeout(const Duration(seconds: 3));
+      if (wsSnap.exists && wsSnap.value != null && wsSnap.value.toString().isNotEmpty) {
+        wsUrl = wsSnap.value.toString();
       }
 
-      // 2. Fallback to /server_url node converted to ws://
-      final serverRef = _database.ref('server_url');
-      final serverSnap = await serverRef.get().timeout(const Duration(seconds: 3));
-      if (serverSnap.exists && serverSnap.value != null) {
-        String httpUrl = serverSnap.value.toString();
-        String wsUrl = httpUrl.replaceAll('http://', 'ws://').replaceAll('https://', 'wss://');
-        if (kDebugMode) {
-          print("RealtimeWS: Dynamic WS URL converted from server_url: $wsUrl");
-        }
-        return wsUrl;
+      final httpSnap = await db.ref('server_url').get().timeout(const Duration(seconds: 3));
+      if (httpSnap.exists && httpSnap.value != null && httpSnap.value.toString().isNotEmpty) {
+        httpUrl = httpSnap.value.toString();
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print("RealtimeWS: Could not fetch dynamic IP from Firebase: $e");
-      }
-    }
+    } catch (_) {}
 
-    // Default localhost fallback for emulator/desktop
-    return 'ws://localhost:5000';
+    return {'http': httpUrl, 'ws': wsUrl};
   }
 
   void _handleMessage(dynamic rawMessage) {
@@ -224,13 +200,13 @@ class RealtimeWebSocketService {
       final type = data['type']?.toString();
 
       if (type == 'ADMIN_TELEMETRY' && data['data'] != null) {
-        final telemetry = AdminTelemetryData.fromJson(
+        final telemetry = SystemTelemetryModel.fromJson(
           Map<String, dynamic>.from(data['data']),
           isConnected: true,
         );
         _telemetryController.add(telemetry);
         
-        // Cache latest telemetry locally for offline access
+        // Cache latest telemetry payload to Hive local storage before UI rendering
         HiveLocalDatabase.instance.saveString('latest_telemetry', rawMessage.toString());
       }
     } catch (e) {
@@ -244,24 +220,24 @@ class RealtimeWebSocketService {
     _isConnected = false;
     _pingTimer?.cancel();
     
-    // Read cached telemetry or push offline fallback
+    // Read cached telemetry from Hive for offline fallback
     final cached = await HiveLocalDatabase.instance.getString('latest_telemetry');
     if (cached != null && cached.isNotEmpty) {
       try {
         final parsed = jsonDecode(cached);
         if (parsed['data'] != null) {
-          _telemetryController.add(AdminTelemetryData.fromJson(
+          _telemetryController.add(SystemTelemetryModel.fromJson(
             Map<String, dynamic>.from(parsed['data']),
             isConnected: false,
           ));
         } else {
-          _telemetryController.add(AdminTelemetryData.fallbackOffline());
+          _telemetryController.add(SystemTelemetryModel.fallbackOffline());
         }
       } catch (_) {
-        _telemetryController.add(AdminTelemetryData.fallbackOffline());
+        _telemetryController.add(SystemTelemetryModel.fallbackOffline());
       }
     } else {
-      _telemetryController.add(AdminTelemetryData.fallbackOffline());
+      _telemetryController.add(SystemTelemetryModel.fallbackOffline());
     }
 
     _scheduleReconnect();
@@ -315,6 +291,7 @@ class RealtimeWebSocketService {
   }
 
   void dispose() {
+    _discoverySubscription?.cancel();
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
     _channel?.sink.close();
