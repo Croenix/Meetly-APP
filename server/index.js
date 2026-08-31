@@ -212,19 +212,32 @@ function generatePincodeBusinesses(pincode, categoryFilter = null) {
   categoriesToFetch.forEach((cat, idx) => {
     const prefixes = ['Kerala Pro', 'Express', 'City Expert', 'Royal', 'Star Line'];
     const prefix = prefixes[idx % prefixes.length];
+    const lat = Number((9.9312 + (Math.random() * 0.05 - 0.025)).toFixed(4));
+    const lng = Number((76.2673 + (Math.random() * 0.05 - 0.025)).toFixed(4));
+    const phone = `+91 9847${Math.floor(100000 + Math.random() * 900000)}`;
 
     listings.push({
       id: `biz_${pincode}_${cat.toLowerCase().replace(/\s+/g, '_')}_${idx + 1}`,
       name: `${prefix} ${cat} Services`,
       category: cat,
+      secondaryCategories: [cat, 'Home Services', 'Emergency Repair'],
+      phone: phone,
+      address: `Suite ${101 + idx}, Main Road, ${pinObj.city}, PIN - ${pincode}`,
       pincode: pincode,
-      address: `Main Road, ${pinObj.city}, PIN - ${pincode}`,
-      phone: `+91 9847${Math.floor(100000 + Math.random() * 900000)}`,
-      rating: Number((4.2 + Math.random() * 0.7).toFixed(1)),
-      imageUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
-      latitude: 9.9312 + (Math.random() * 0.05 - 0.025),
-      longitude: 76.2673 + (Math.random() * 0.05 - 0.025),
       city: pinObj.city,
+      latitude: lat,
+      longitude: lng,
+      rating: Number((4.2 + Math.random() * 0.7).toFixed(1)),
+      reviewCount: Math.floor(40 + Math.random() * 260),
+      imageUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
+      images: [
+        'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
+        'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500',
+      ],
+      workingHours: '08:00 AM - 08:00 PM',
+      isOpenNow: true,
+      websiteUrl: `https://meetly.in/services/${pincode}/${cat.toLowerCase()}`,
+      mapUrl: `https://maps.google.com/?q=${lat},${lng}`,
       updatedAt: new Date().toISOString(),
     });
   });
@@ -838,6 +851,91 @@ app.delete('/api/banners/:id', async (req, res) => {
   broadcastAnalytics();
   broadcastConfigUpdate('banners', filtered);
   res.json({ message: "Banner deleted", banners: filtered });
+});
+
+// --- BUSINESS DIRECTORY REST ENDPOINTS ---
+app.get('/api/directory', (req, res) => {
+  const directory = readJsonFile(DIRECTORY_FILE, generatePincodeBusinesses('682001'));
+  res.json(directory);
+});
+
+app.post('/api/admin/fetch-directory', (req, res) => {
+  const { option, pincode, category } = req.body;
+  let currentDirectory = readJsonFile(DIRECTORY_FILE, []);
+
+  if (option === 'bulk') {
+    let newItems = [];
+    KERALA_PINCODES.forEach(p => {
+      const items = generatePincodeBusinesses(p.pincode);
+      newItems.push(...items);
+    });
+    currentDirectory = newItems;
+  } else if (option === 'single' && pincode) {
+    const items = generatePincodeBusinesses(pincode);
+    const existingFiltered = currentDirectory.filter(b => b.pincode !== pincode);
+    currentDirectory = [...items, ...existingFiltered];
+  } else if (option === 'category' && pincode && category) {
+    const items = generatePincodeBusinesses(pincode, category);
+    const existingFiltered = currentDirectory.filter(b => !(b.pincode === pincode && b.category.toLowerCase() === category.toLowerCase()));
+    currentDirectory = [...items, ...existingFiltered];
+  }
+
+  writeJsonFile(DIRECTORY_FILE, currentDirectory);
+  broadcastConfigUpdate('directory', currentDirectory);
+  res.json({
+    status: 'success',
+    message: `Data Aggregation Complete: ${currentDirectory.length} total records persisted.`,
+    directory: currentDirectory,
+  });
+});
+
+app.post('/api/directory', (req, res) => {
+  const currentDirectory = readJsonFile(DIRECTORY_FILE, []);
+  const newItem = {
+    id: 'biz_' + Date.now(),
+    name: req.body.name || 'New Service Provider',
+    category: req.body.category || 'General',
+    secondaryCategories: req.body.secondaryCategories || [req.body.category || 'General'],
+    phone: req.body.phone || '+91 9847000000',
+    address: req.body.address || 'Kochi, Kerala',
+    pincode: req.body.pincode || '682001',
+    city: req.body.city || 'Kochi',
+    latitude: req.body.latitude || 9.9312,
+    longitude: req.body.longitude || 76.2673,
+    rating: req.body.rating || 4.5,
+    reviewCount: req.body.reviewCount || 10,
+    imageUrl: req.body.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
+    images: req.body.images || ['https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'],
+    workingHours: req.body.workingHours || '08:00 AM - 08:00 PM',
+    isOpenNow: true,
+    websiteUrl: req.body.websiteUrl || 'https://meetly.in',
+    mapUrl: req.body.mapUrl || 'https://maps.google.com',
+    updatedAt: new Date().toISOString(),
+  };
+
+  currentDirectory.unshift(newItem);
+  writeJsonFile(DIRECTORY_FILE, currentDirectory);
+  broadcastConfigUpdate('directory', currentDirectory);
+  res.json({ message: "Business record added", item: newItem, directory: currentDirectory });
+});
+
+app.put('/api/directory/:id', (req, res) => {
+  const currentDirectory = readJsonFile(DIRECTORY_FILE, []);
+  const idx = currentDirectory.findIndex(item => item.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Item not found" });
+
+  currentDirectory[idx] = { ...currentDirectory[idx], ...req.body, updatedAt: new Date().toISOString() };
+  writeJsonFile(DIRECTORY_FILE, currentDirectory);
+  broadcastConfigUpdate('directory', currentDirectory);
+  res.json({ message: "Business record updated", item: currentDirectory[idx], directory: currentDirectory });
+});
+
+app.delete('/api/directory/:id', (req, res) => {
+  const currentDirectory = readJsonFile(DIRECTORY_FILE, []);
+  const filtered = currentDirectory.filter(item => item.id !== req.params.id);
+  writeJsonFile(DIRECTORY_FILE, filtered);
+  broadcastConfigUpdate('directory', filtered);
+  res.json({ message: "Business record deleted", directory: filtered });
 });
 
 // START SERVER & PUBLISH DISCOVERY ADDRESS TO FIREBASE RTDB

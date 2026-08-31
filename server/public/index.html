@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meetly Admin Console — Master Control & Aggregator</title>
+  <title>Meetly Admin Console — Master Control & Pincode Directory Engine</title>
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
       --secondary: #06b6d4;
       --accent: #ec4899;
       --background: #090d16;
-      --surface: rgba(17, 24, 39, 0.7);
+      --surface: rgba(17, 24, 39, 0.75);
       --surface-card: rgba(30, 41, 59, 0.5);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
@@ -56,7 +56,7 @@
       flex-direction: column;
     }
 
-    /* Premium Header Bar */
+    /* Header Bar */
     header {
       background: rgba(10, 15, 30, 0.85);
       backdrop-filter: blur(20px);
@@ -143,7 +143,7 @@
       100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
     }
 
-    /* Tabs Navigation */
+    /* Navigation Tabs */
     .tabs-nav {
       background: rgba(10, 15, 30, 0.5);
       backdrop-filter: blur(16px);
@@ -198,7 +198,7 @@
     main {
       flex: 1;
       padding: 32px;
-      max-width: 1360px;
+      max-width: 1440px;
       width: 100%;
       margin: 0 auto;
     }
@@ -219,7 +219,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Glass Cards */
+    /* Cards */
     .card {
       background: rgba(30, 41, 59, 0.4);
       backdrop-filter: blur(20px);
@@ -246,29 +246,12 @@
       align-items: center;
     }
 
-    /* Grid Layouts */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 
     @media (max-width: 1024px) {
-      .grid-2, .grid-3, .grid-4 {
-        grid-template-columns: 1fr;
-      }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
 
     /* Form Controls */
@@ -339,16 +322,6 @@
       background: rgba(255, 255, 255, 0.12);
     }
 
-    .btn-success {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-    }
-
-    .btn-success:hover {
-      transform: translateY(-2px);
-    }
-
     /* Option Cards */
     .option-card {
       background: rgba(15, 23, 42, 0.5);
@@ -395,11 +368,11 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     th {
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(15, 23, 42, 0.85);
       color: var(--text-muted);
       font-weight: 700;
       text-transform: uppercase;
@@ -414,6 +387,7 @@
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
       color: var(--text-main);
+      vertical-align: top;
     }
 
     tr:hover {
@@ -431,18 +405,38 @@
       color: var(--primary);
     }
 
-    /* Preview Component */
-    .banner-preview {
-      width: 100%;
-      height: 150px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, #1e1b4b, #311042);
-      box-shadow: var(--shadow-lg);
-      padding: 20px;
+    .badge-secondary {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--secondary);
+    }
+
+    /* Modal Dialog */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.open {
       display: flex;
-      position: relative;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     /* Toast */
@@ -462,7 +456,7 @@
       transform: translateY(100px);
       opacity: 0;
       transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      z-index: 1000;
+      z-index: 2000;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -482,7 +476,7 @@
       <div class="logo-badge">M</div>
       <div class="header-title">
         <h1>Meetly Master Admin Console</h1>
-        <p>Real-Time Operations, Pincode Aggregator & Service Directory</p>
+        <p>Real-Time Operations, 3-Option Pincode Aggregator & Directory Engine</p>
       </div>
     </div>
     <div class="status-panel">
@@ -612,16 +606,16 @@
     </div>
 
 
-    <!-- TAB 2: 3-OPTION PINCODE AGGREGATOR ENGINE -->
+    <!-- TAB 2: 3-OPTION PINCODE AGGREGATOR ENGINE & BUSINESS DIRECTORY -->
     <div id="pincode-tab" class="tab-content">
       <div class="card">
         <div class="card-title">
-          <span><i class="fa-solid fa-database" style="color: var(--primary);"></i> Pincode Data Scraping & Aggregation Engine</span>
+          <span><i class="fa-solid fa-database" style="color: var(--primary);"></i> 3-Option Pincode Data Scraping Engine</span>
           <span class="badge" id="directory-total-badge">0 Total Listings</span>
         </div>
 
         <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-          Select one of the 3 primary data fetching options to aggregate local business directory listings (Electricians, Plumbers, Mechanics, Schools, Hospitals, Cleaners, etc.) into the Node.js server database. Aggregated data is automatically pushed to all connected mobile clients.
+          Select one of the 3 data fetching methods to scrape, aggregate, and persist rich local business directory listings into the Node.js server. Extracted fields include Phone, Address, Coordinates, Ratings, Review Counts, Working Hours, Website, and Photo URLs.
         </p>
 
         <!-- 3 Aggregation Options Grid -->
@@ -631,11 +625,11 @@
               <div class="option-icon"><i class="fa-solid fa-network-wired"></i></div>
               <div>
                 <h4 style="font-size: 14px; font-weight: 700;">Option 1: Automated Bulk Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Pre-seeded Kerala Pincode Loop</p>
+                <p style="font-size: 11px; color: var(--text-muted);">All Kerala Pincode Loop</p>
               </div>
             </div>
             <p style="font-size: 12px; color: var(--text-muted);">
-              Automated scraper loops through pre-seeded Kerala Pincodes (Kochi, Kozhikode, Trivandrum, Aluva) and seeds full service listings.
+              Automated scraper loops through pre-seeded Kerala pincodes (682001, 682002, 682020, 673001, 695001, etc.) across all categories.
             </p>
           </div>
 
@@ -644,11 +638,11 @@
               <div class="option-icon" style="color: var(--secondary); background: rgba(6, 182, 212, 0.15);"><i class="fa-solid fa-map-pin"></i></div>
               <div>
                 <h4 style="font-size: 14px; font-weight: 700;">Option 2: Individual Pincode Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Target Single Pincode Location</p>
+                <p style="font-size: 11px; color: var(--text-muted);">Target Specific Location</p>
               </div>
             </div>
             <p style="font-size: 12px; color: var(--text-muted);">
-              Input a specific pincode (e.g. 682020) to fetch and persist places within that location.
+              Input a specific pincode (e.g. 682020) to fetch and persist places within that area.
             </p>
           </div>
 
@@ -661,7 +655,7 @@
               </div>
             </div>
             <p style="font-size: 12px; color: var(--text-muted);">
-              Fetch specific service category listings (e.g. Electricians) within a target pincode.
+              Fetch specific service category listings (Electricians, Plumbers, Schools, etc.) within a target pincode.
             </p>
           </div>
         </div>
@@ -694,12 +688,13 @@
         </div>
       </div>
 
-      <!-- Business Directory Table -->
+      <!-- Rich Business Directory Data Table -->
       <div class="card">
         <div class="card-title">
-          <span>Persisted Business Directory Records</span>
+          <span>Persisted Business Directory Records (Maximum Extraction Fields)</span>
           <div style="display: flex; gap: 10px;">
-            <input type="text" id="dir-search-input" placeholder="Search business, category or pincode..." oninput="filterDirectoryTable()" style="width: 240px; padding: 6px 12px; font-size: 12px;">
+            <input type="text" id="dir-search-input" placeholder="Search business, address, or pincode..." oninput="filterDirectoryTable()" style="width: 240px; padding: 6px 12px; font-size: 12px;">
+            <button class="btn btn-primary" onclick="openAddBusinessModal()" style="padding: 6px 14px; font-size: 12px;">+ Add Record</button>
             <button class="btn btn-secondary" onclick="loadDirectory()" style="padding: 6px 14px; font-size: 12px;">Refresh</button>
           </div>
         </div>
@@ -707,16 +702,17 @@
           <table>
             <thead>
               <tr>
-                <th>BUSINESS NAME</th>
-                <th>CATEGORY</th>
-                <th>PINCODE</th>
-                <th>CITY / LOCATION</th>
-                <th>PHONE</th>
-                <th>RATING</th>
+                <th>BUSINESS NAME & TITLE</th>
+                <th>CATEGORIES</th>
+                <th>CONTACT & ADDRESS</th>
+                <th>COORDINATES & MAP</th>
+                <th>RATINGS & REVIEWS</th>
+                <th>HOURS & STATUS</th>
+                <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody id="directory-table-body">
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading business directory...</td></tr>
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading business directory records...</td></tr>
             </tbody>
           </table>
         </div>
@@ -756,14 +752,13 @@
           </div>
 
           <button class="btn btn-primary" onclick="saveBanner()" style="margin-top: 10px;">
-            <i class="fa-solid fa-floppy-disk"></i> Save & Sync to Clients
+            <i class="fa-solid fa-floppy-disk"></i> Save & Sync to Mobile Clients
           </button>
         </div>
 
-        <!-- Preview -->
         <div class="card">
           <div class="card-title">Live Preview (Mobile Carousel Slide)</div>
-          <div class="banner-preview">
+          <div style="width: 100%; height: 150px; border-radius: 18px; background: linear-gradient(135deg, #1e1b4b, #311042); padding: 20px; display: flex; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
             <div style="flex: 6; display: flex; flex-direction: column; justify-content: center; z-index: 2;">
               <div id="prev-subtitle" style="color: #818cf8; font-size: 11px; font-weight: 800; text-transform: uppercase;">Save 30% Today!</div>
               <div id="prev-title" style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 6px 0 10px 0;">Exclusive discounts<br>on home services</div>
@@ -774,12 +769,11 @@
             </div>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
-            Updates stream instantly via WebSocket to all connected mobile clients.
+            Updates stream instantly via WebSocket to all connected mobile clients without app restart.
           </div>
         </div>
       </div>
 
-      <!-- Active Banners List -->
       <div class="card">
         <div class="card-title">Active Promotion Banners</div>
         <div id="banners-list-container" style="display: flex; flex-direction: column; gap: 12px;">
@@ -816,6 +810,52 @@
     </div>
 
   </main>
+
+  <!-- Add/Edit Business Record Modal -->
+  <div class="modal-overlay" id="biz-modal">
+    <div class="modal-card">
+      <h3 style="font-size: 18px; font-weight: 800; color: white;" id="modal-title">Add Business Listing</h3>
+      
+      <input type="hidden" id="modal-biz-id" value="">
+      
+      <div class="form-group">
+        <label for="modal-biz-name">BUSINESS NAME</label>
+        <input type="text" id="modal-biz-name" placeholder="e.g. Kochi Express Electricians">
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <div class="form-group" style="flex: 1;">
+          <label for="modal-biz-cat">PRIMARY CATEGORY</label>
+          <input type="text" id="modal-biz-cat" placeholder="e.g. Electricians">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="modal-biz-pin">PINCODE</label>
+          <input type="text" id="modal-biz-pin" placeholder="e.g. 682020">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <div class="form-group" style="flex: 1;">
+          <label for="modal-biz-phone">PHONE NUMBER</label>
+          <input type="text" id="modal-biz-phone" placeholder="+91 9847123456">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="modal-biz-city">CITY / REGION</label>
+          <input type="text" id="modal-biz-city" placeholder="Kochi">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="modal-biz-addr">FULL ADDRESS</label>
+        <input type="text" id="modal-biz-addr" placeholder="Main Road, Vyttila, Kochi">
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 10px;">
+        <button class="btn btn-secondary" onclick="closeBusinessModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveBusinessRecord()">Save Record</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast -->
   <div class="toast" id="toast-message">
@@ -916,19 +956,49 @@
       tbody.innerHTML = '';
 
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No directory records found. Click "Trigger Data Aggregation Engine" above.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No directory records found. Click "Trigger Data Aggregation Engine" above.</td></tr>';
         return;
       }
 
       list.forEach(item => {
         const tr = document.createElement('tr');
+        const secCatBadges = (item.secondaryCategories || [item.category]).map(c => `<span class="badge badge-secondary" style="font-size: 9px; margin-right: 4px; margin-top: 2px;">${escapeHtml(c)}</span>`).join('');
+        const mapUrl = item.mapUrl || `https://maps.google.com/?q=${item.latitude},${item.longitude}`;
+
         tr.innerHTML = `
-          <td style="font-weight: 700; color: #ffffff;">${escapeHtml(item.name)}</td>
-          <td><span class="badge">${escapeHtml(item.category)}</span></td>
-          <td style="font-family: monospace; color: var(--secondary); font-weight: bold;">${escapeHtml(item.pincode)}</td>
-          <td>${escapeHtml(item.city || item.address)}</td>
-          <td style="font-family: monospace;">${escapeHtml(item.phone)}</td>
-          <td style="color: var(--warning); font-weight: bold;">★ ${item.rating || 4.5}</td>
+          <td>
+            <div style="font-weight: 700; color: #ffffff; font-size: 13px;">${escapeHtml(item.name)}</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">ID: ${escapeHtml(item.id)}</div>
+          </td>
+          <td>
+            <div><span class="badge">${escapeHtml(item.category)}</span></div>
+            <div style="margin-top: 4px;">${secCatBadges}</div>
+          </td>
+          <td>
+            <div style="font-weight: 600; color: #ffffff;"><i class="fa-solid fa-phone" style="font-size: 10px; color: var(--success); margin-right: 4px;"></i>${escapeHtml(item.phone)}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(item.address)}</div>
+            <div style="font-size: 10px; color: var(--secondary); font-weight: bold; margin-top: 2px;">PIN: ${escapeHtml(item.pincode)}</div>
+          </td>
+          <td>
+            <div style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${item.latitude || 9.93}, ${item.longitude || 76.26}</div>
+            <a href="${mapUrl}" target="_blank" style="font-size: 10px; color: var(--primary); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px;">
+              <i class="fa-solid fa-map-location-dot"></i> View Map
+            </a>
+          </td>
+          <td>
+            <div style="color: var(--warning); font-weight: bold; font-size: 13px;">★ ${item.rating || 4.5}</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${item.reviewCount || 45} reviews</div>
+          </td>
+          <td>
+            <div style="font-size: 11px; color: #ffffff; font-weight: 500;">${escapeHtml(item.workingHours || '08:00 AM - 08:00 PM')}</div>
+            <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-top: 2px;">● Open Now</div>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary" onclick="openEditBusinessModal('${item.id}')" style="padding: 4px 8px; font-size: 11px;" title="Edit Record"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-secondary" onclick="deleteBusinessRecord('${item.id}')" style="padding: 4px 8px; font-size: 11px; color: var(--error);" title="Delete Record"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -940,9 +1010,83 @@
         item.name.toLowerCase().includes(query) ||
         item.category.toLowerCase().includes(query) ||
         item.pincode.includes(query) ||
-        (item.city && item.city.toLowerCase().includes(query))
+        (item.city && item.city.toLowerCase().includes(query)) ||
+        (item.address && item.address.toLowerCase().includes(query))
       );
       renderDirectoryTable(filtered);
+    }
+
+    function openAddBusinessModal() {
+      document.getElementById('modal-title').innerText = 'Add Business Listing';
+      document.getElementById('modal-biz-id').value = '';
+      document.getElementById('modal-biz-name').value = '';
+      document.getElementById('modal-biz-cat').value = 'Electricians';
+      document.getElementById('modal-biz-pin').value = '682020';
+      document.getElementById('modal-biz-phone').value = '+91 9847123456';
+      document.getElementById('modal-biz-city').value = 'Kochi';
+      document.getElementById('modal-biz-addr').value = 'Main Road, Vyttila, Kochi';
+      document.getElementById('biz-modal').classList.add('open');
+    }
+
+    function openEditBusinessModal(id) {
+      const item = directoryList.find(b => b.id === id);
+      if (!item) return;
+      document.getElementById('modal-title').innerText = 'Edit Business Listing';
+      document.getElementById('modal-biz-id').value = item.id;
+      document.getElementById('modal-biz-name').value = item.name;
+      document.getElementById('modal-biz-cat').value = item.category;
+      document.getElementById('modal-biz-pin').value = item.pincode;
+      document.getElementById('modal-biz-phone').value = item.phone;
+      document.getElementById('modal-biz-city').value = item.city || 'Kochi';
+      document.getElementById('modal-biz-addr').value = item.address;
+      document.getElementById('biz-modal').classList.add('open');
+    }
+
+    function closeBusinessModal() {
+      document.getElementById('biz-modal').classList.remove('open');
+    }
+
+    async function saveBusinessRecord() {
+      const id = document.getElementById('modal-biz-id').value;
+      const name = document.getElementById('modal-biz-name').value;
+      const cat = document.getElementById('modal-biz-cat').value;
+      const pin = document.getElementById('modal-biz-pin').value;
+      const phone = document.getElementById('modal-biz-phone').value;
+      const city = document.getElementById('modal-biz-city').value;
+      const addr = document.getElementById('modal-biz-addr').value;
+
+      if (!name || !pin) return alert("Business name and pincode are required.");
+
+      const payload = { name, category: cat, pincode: pin, phone, city, address: addr };
+
+      try {
+        const url = id ? `/api/directory/${id}` : '/api/directory';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          showToast(id ? "Record updated!" : "Record created!");
+          closeBusinessModal();
+          loadDirectory();
+        }
+      } catch (_) {
+        showToast("Error saving record.");
+      }
+    }
+
+    async function deleteBusinessRecord(id) {
+      if (!confirm("Are you sure you want to delete this business record?")) return;
+      try {
+        const res = await fetch(`/api/directory/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast("Business record deleted.");
+          loadDirectory();
+        }
+      } catch (_) {}
     }
 
     async function loadBanners() {
