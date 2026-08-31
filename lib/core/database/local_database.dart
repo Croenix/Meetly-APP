@@ -22,6 +22,24 @@ class HiveLocalDatabase {
     return prefs.getString('$_keyPrefix$key');
   }
 
+  // Save a single Map
+  Future<void> saveMap(String key, Map<String, dynamic> map) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_keyPrefix$key', json.encode(map));
+  }
+
+  // Get a single Map
+  Future<Map<String, dynamic>?> getMap(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString('$_keyPrefix$key');
+    if (jsonStr == null) return null;
+    try {
+      return json.decode(jsonStr) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Save a list of Strings (e.g. categories)
   Future<void> saveStringList(String key, List<String> list) async {
     final prefs = await SharedPreferences.getInstance();

@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import '../database/local_database.dart';
 
 // Helper to resolve the correct regional database instance
 FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
@@ -220,49 +222,31 @@ class SyncService {
   static const String _cacheKey = 'meetly_cached_settings';
   static const String _bannersCacheKey = 'meetly_cached_banners';
 
-  // Fetch multiple banners - Offline-first Sync Algorithm directly via Firebase RTDB
+  // Fetch multiple banners - Node.js Backend Primary with Hive Storage Fallback
   Future<List<PromoBanner>> fetchBanners() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // --- STEP 1: Fetch directly from Firebase Realtime Database ---
+    // --- STEP 1: Fetch directly from Node.js Backend Server ---
     try {
-      if (kDebugMode) {
-        print("SyncService: Fetching banners from Firebase Realtime Database...");
-      }
-      final dbRef = _database.ref('banners');
-      final snapshot = await dbRef.get().timeout(const Duration(seconds: 3));
+      final serverUrl = await fetchServerUrl();
+      final uri = Uri.parse('$serverUrl/api/banners');
+      final res = await http.get(uri).timeout(const Duration(seconds: 3));
 
-      if (snapshot.exists) {
-        final rawVal = snapshot.value;
-        List<dynamic> rawList = [];
-        if (rawVal is List) {
-          rawList = rawVal;
-        } else if (rawVal is Map) {
-          rawList = rawVal.values.toList();
-        }
-
-        final List<PromoBanner> banners = rawList
-            .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
-            .toList();
-
-        // Cache locally
-        await prefs.setString(_bannersCacheKey, json.encode(rawList));
-        return banners;
+      if (res.statusCode == 200) {
+        final List<dynamic> raw = json.decode(res.body);
+        final list = raw.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+        await HiveLocalDatabase.instance.saveMapList('banners', list);
+        return list.map((item) => PromoBanner.fromJson(item)).toList();
       }
     } catch (e) {
       if (kDebugMode) {
-        print("SyncService: Firebase RTDB offline/failed for banners ($e). Loading from cache...");
+        print("SyncService: Node.js server offline/unreachable for banners ($e). Loading from Hive storage...");
       }
     }
 
-    // --- STEP 2: Load cached banners from SharedPreferences ---
-    final cachedText = prefs.getString(_bannersCacheKey);
-    if (cachedText != null && cachedText.isNotEmpty) {
+    // --- STEP 2: Load cached banners from Hive Storage ---
+    final cached = await HiveLocalDatabase.instance.getMapList('banners');
+    if (cached != null && cached.isNotEmpty) {
       try {
-        final List<dynamic> rawList = json.decode(cachedText);
-        return rawList
-            .map((item) => PromoBanner.fromJson(Map<String, dynamic>.from(item as Map)))
-            .toList();
+        return cached.map((item) => PromoBanner.fromJson(item)).toList();
       } catch (e) {
         if (kDebugMode) {
           print("SyncService: Error parsing cached banners ($e).");

@@ -474,6 +474,42 @@ function broadcastAnalytics() {
   });
 }
 
+function broadcastConfigUpdate(changeType, payloadData) {
+  const msg = JSON.stringify({
+    type: 'CONFIG_UPDATE',
+    changeType: changeType,
+    banners: readJsonFile(BANNERS_FILE, defaultBanners),
+    categories: readJsonFile(CATEGORIES_FILE, defaultCategories),
+    settings: readJsonFile(SETTINGS_FILE, defaultSettings),
+    bookings: readJsonFile(BOOKINGS_FILE, defaultBookings),
+    payload: payloadData,
+    serverTimestamp: new Date().toISOString()
+  });
+
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(msg);
+    }
+  });
+}
+
+// Smart Delta Sync Endpoint
+app.post('/api/sync/delta', (req, res) => {
+  const banners = readJsonFile(BANNERS_FILE, defaultBanners);
+  const categories = readJsonFile(CATEGORIES_FILE, defaultCategories);
+  const settings = readJsonFile(SETTINGS_FILE, defaultSettings);
+  const bookings = readJsonFile(BOOKINGS_FILE, defaultBookings);
+
+  res.json({
+    status: 'success',
+    banners,
+    categories,
+    settings,
+    bookings,
+    serverTimestamp: new Date().toISOString()
+  });
+});
+
 wss.on('connection', (ws, req, tokenPayload) => {
   sessionManager.register(ws, tokenPayload, req);
 
@@ -481,6 +517,17 @@ wss.on('connection', (ws, req, tokenPayload) => {
   ws.send(JSON.stringify({
     type: 'ADMIN_TELEMETRY',
     data: computeAnalytics()
+  }));
+
+  // Send initial config payload upon connection
+  ws.send(JSON.stringify({
+    type: 'CONFIG_UPDATE',
+    changeType: 'initial_sync',
+    banners: readJsonFile(BANNERS_FILE, defaultBanners),
+    categories: readJsonFile(CATEGORIES_FILE, defaultCategories),
+    settings: readJsonFile(SETTINGS_FILE, defaultSettings),
+    bookings: readJsonFile(BOOKINGS_FILE, defaultBookings),
+    serverTimestamp: new Date().toISOString()
   }));
 
   broadcastAnalytics();
@@ -609,6 +656,7 @@ app.post('/api/settings', async (req, res) => {
   const updated = { ...current, ...req.body, updatedAt: new Date().toISOString() };
   writeJsonFile(SETTINGS_FILE, updated);
   const synced = await syncToFirebase(FIREBASE_SETTINGS_URL, updated);
+  broadcastConfigUpdate('settings', updated);
   res.json({ message: "Settings saved", settings: updated, firebaseSynced: synced });
 });
 
@@ -626,6 +674,7 @@ app.post('/api/categories', async (req, res) => {
     writeJsonFile(CATEGORIES_FILE, categories);
     await syncToFirebase(FIREBASE_CATEGORIES_URL, categories);
     broadcastAnalytics();
+    broadcastConfigUpdate('categories', categories);
   }
   res.json({ message: "Category added", categories });
 });
@@ -637,6 +686,7 @@ app.delete('/api/categories/:name', async (req, res) => {
   writeJsonFile(CATEGORIES_FILE, filtered);
   await syncToFirebase(FIREBASE_CATEGORIES_URL, filtered);
   broadcastAnalytics();
+  broadcastConfigUpdate('categories', filtered);
   res.json({ message: "Category deleted", categories: filtered });
 });
 
@@ -662,6 +712,7 @@ app.post('/api/banners', async (req, res) => {
   writeJsonFile(BANNERS_FILE, banners);
   await syncToFirebase(FIREBASE_BANNERS_URL, banners);
   broadcastAnalytics();
+  broadcastConfigUpdate('banners', banners);
   res.json({ message: "Banner saved", banners });
 });
 
@@ -672,6 +723,7 @@ app.delete('/api/banners/:id', async (req, res) => {
   writeJsonFile(BANNERS_FILE, filtered);
   await syncToFirebase(FIREBASE_BANNERS_URL, filtered);
   broadcastAnalytics();
+  broadcastConfigUpdate('banners', filtered);
   res.json({ message: "Banner deleted", banners: filtered });
 });
 

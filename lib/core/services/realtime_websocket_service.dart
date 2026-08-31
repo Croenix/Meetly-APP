@@ -230,12 +230,11 @@ class RealtimeWebSocketService {
     return {'http': httpUrl, 'ws': wsUrl};
   }
 
-  void _handleMessage(dynamic rawMessage) {
+  void _handleMessage(dynamic rawMessage) async {
     try {
       final Map<String, dynamic> data = jsonDecode(rawMessage.toString());
-      final type = data['type']?.toString();
 
-      if (type == 'ADMIN_TELEMETRY' && data['data'] != null) {
+      if (data['type'] == 'ADMIN_TELEMETRY' && data['data'] != null) {
         final telemetry = SystemTelemetryModel.fromJson(
           Map<String, dynamic>.from(data['data']),
           isConnected: true,
@@ -244,6 +243,25 @@ class RealtimeWebSocketService {
         
         // Cache latest telemetry payload to Hive local storage before UI rendering
         HiveLocalDatabase.instance.saveString('latest_telemetry', rawMessage.toString());
+      } else if (data['type'] == 'CONFIG_UPDATE') {
+        if (data['banners'] != null && data['banners'] is List) {
+          final bannerList = (data['banners'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          await HiveLocalDatabase.instance.saveMapList('banners', bannerList);
+        }
+        if (data['categories'] != null && data['categories'] is List) {
+          final catList = (data['categories'] as List).map((e) => e.toString()).toList();
+          await HiveLocalDatabase.instance.saveStringList('categories', catList);
+        }
+        if (data['settings'] != null && data['settings'] is Map) {
+          await HiveLocalDatabase.instance.saveMap('settings', Map<String, dynamic>.from(data['settings']));
+        }
+        if (data['bookings'] != null && data['bookings'] is List) {
+          final bookingList = (data['bookings'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          await HiveLocalDatabase.instance.saveMapList('bookings', bookingList);
+        }
+        if (kDebugMode) {
+          print("RealtimeWS: Received CONFIG_UPDATE broadcast. Successfully reconciled local Hive storage.");
+        }
       }
     } catch (e) {
       if (kDebugMode) {
