@@ -78,8 +78,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             children: [
               // Beautiful App Icon Logo
               Container(
-                width: 100,
-                height: 100,
+                width: 102,
+                height: 102,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
