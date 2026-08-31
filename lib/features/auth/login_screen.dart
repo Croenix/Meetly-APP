@@ -16,8 +16,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'aarav.nair@meetly.in');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = true;
 
@@ -28,18 +28,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _handleDemoLogin(UserRole role) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    await ref.read(authStateProvider.notifier).loginAsDemo(role);
-
-    if (mounted) {
-      Navigator.pop(context);
-      ref.read(authStateProvider).whenData((user) {
+  void _checkAuthResult() {
+    final authState = ref.read(authStateProvider);
+    authState.when(
+      data: (user) {
         if (user != null) {
           switch (user.role) {
             case UserRole.customer:
@@ -57,13 +49,83 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               break;
           }
         }
-      });
+      },
+      error: (e, _) {
+        final errorMsg = e.toString();
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 28),
+                SizedBox(width: 10),
+                Text('Not Registered', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
+            ),
+            content: Text(
+              errorMsg.contains('registered')
+                  ? 'You are not registered yet. Please register first to continue.'
+                  : errorMsg,
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  context.go('/register');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C5CE7),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Go to Register', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () {},
+    );
+  }
+
+  void _handleFormSubmit() async {
+    if (_formKey.currentState!.validate()) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      await ref.read(authStateProvider.notifier).loginWithEmail(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
+
+      if (mounted) {
+        Navigator.pop(context);
+        _checkAuthResult();
+      }
     }
   }
 
-  void _handleFormSubmit() {
-    if (_formKey.currentState!.validate()) {
-      _handleDemoLogin(UserRole.customer);
+  void _handleSocialLogin(String providerName) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    await ref.read(authStateProvider.notifier).loginWithSocial(providerName);
+
+    if (mounted) {
+      Navigator.pop(context);
+      _checkAuthResult();
     }
   }
 
@@ -153,10 +215,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Row(
+                      const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'Welcome back! ',
                             style: TextStyle(
                               fontSize: 18,
@@ -164,7 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               color: primaryColor,
                             ),
                           ),
-                          const Text(
+                          Text(
                             '👋',
                             style: TextStyle(fontSize: 18),
                           ),
@@ -397,14 +459,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   painter: GoogleLogoPainter(),
                                 ),
                                 isDark: isDark,
-                                onTap: () => _handleDemoLogin(UserRole.customer),
-                              ),
-                              const SizedBox(height: 12),
-                              _buildSocialButton(
-                                label: 'Continue with Microsoft',
-                                icon: _buildMicrosoftIcon(),
-                                isDark: isDark,
-                                onTap: () => _handleDemoLogin(UserRole.customer),
+                                onTap: () => _handleSocialLogin('Google'),
                               ),
                               const SizedBox(height: 22),
 
@@ -544,35 +599,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
 
-
-  Widget _buildMicrosoftIcon() {
-    return SizedBox(
-      width: 16,
-      height: 16,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(width: 7, height: 7, color: const Color(0xFFF25022)),
-              const SizedBox(width: 2),
-              Container(width: 7, height: 7, color: const Color(0xFF7FBA00)),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(width: 7, height: 7, color: const Color(0xFF00A4EF)),
-              const SizedBox(width: 2),
-              Container(width: 7, height: 7, color: const Color(0xFFFFB900)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class GoogleLogoPainter extends CustomPainter {

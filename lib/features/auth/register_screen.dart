@@ -43,11 +43,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  void _checkAuthResult() {
+    ref.read(authStateProvider).whenData((user) {
+      if (user != null) {
+        switch (user.role) {
+          case UserRole.customer:
+            context.go('/home');
+            break;
+          case UserRole.provider:
+            context.go('/provider/dashboard');
+            break;
+          case UserRole.admin:
+            if (kIsWeb) {
+              context.go('/admin');
+            } else {
+              context.go('/admin-restricted');
+            }
+            break;
+        }
+      }
+    });
+  }
+
   void _handleRegister() async {
     if (!_agreeTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please accept Terms of Service & Privacy Policy.'),
+          content: Text('Please agree to the Terms of Service and Privacy Policy.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -71,26 +93,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         Navigator.pop(context);
-        ref.read(authStateProvider).whenData((user) {
-          if (user != null) {
-            switch (user.role) {
-              case UserRole.customer:
-                context.go('/home');
-                break;
-              case UserRole.provider:
-                context.go('/provider/dashboard');
-                break;
-              case UserRole.admin:
-                if (kIsWeb) {
-                  context.go('/admin');
-                } else {
-                  context.go('/admin-restricted');
-                }
-                break;
-            }
-          }
-        });
+        _checkAuthResult();
       }
+    }
+  }
+
+  void _handleSocialRegister(String providerName) async {
+    if (!_agreeTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to the Terms of Service and Privacy Policy.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    await ref.read(authStateProvider.notifier).registerWithSocial(
+          providerName,
+          _selectedRole,
+          _selectedLocation,
+          name: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
+          email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+        );
+
+    if (mounted) {
+      Navigator.pop(context);
+      _checkAuthResult();
     }
   }
 
@@ -512,19 +547,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                     ),
                                     const SizedBox(height: 16),
 
-                                    // Social Buttons
+                                    // Social Buttons for Registration
                                     _buildSocialButton(
                                       label: 'Continue with Google',
                                       icon: CustomPaint(size: const Size(18, 18), painter: GoogleLogoPainter()),
                                       isDark: isDark,
-                                      onTap: _handleRegister,
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _buildSocialButton(
-                                      label: 'Continue with Microsoft',
-                                      icon: _buildMicrosoftIcon(),
-                                      isDark: isDark,
-                                      onTap: _handleRegister,
+                                      onTap: () => _handleSocialRegister('Google'),
                                     ),
                                     const SizedBox(height: 20),
 
@@ -654,35 +682,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF334155))),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMicrosoftIcon() {
-    return SizedBox(
-      width: 16,
-      height: 16,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(width: 7, height: 7, color: const Color(0xFFF25022)),
-              const SizedBox(width: 2),
-              Container(width: 7, height: 7, color: const Color(0xFF7FBA00)),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(width: 7, height: 7, color: const Color(0xFF00A4EF)),
-              const SizedBox(width: 2),
-              Container(width: 7, height: 7, color: const Color(0xFFFFB900)),
-            ],
-          ),
-        ],
       ),
     );
   }
