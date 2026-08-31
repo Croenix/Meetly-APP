@@ -1,0 +1,58 @@
+[
+  {
+    "id": "u1",
+    "name": "Alex Johnson",
+    "email": "alex@example.com",
+    "role": "customer",
+    "createdAt": "2026-01-15"
+  },
+  {
+    "id": "u2",
+    "name": "Maria Garcia",
+    "email": "maria@example.com",
+    "role": "customer",
+    "createdAt": "2026-02-10"
+  },
+  {
+    "id": "u3",
+    "name": "Devon Smith",
+    "email": "devon@example.com",
+    "role": "customer",
+    "createdAt": "2026-03-01"
+  },
+  {
+    "id": "p1",
+    "name": "Rajesh Electrical Solutions",
+    "email": "rajesh@meetly.pro",
+    "role": "provider",
+    "createdAt": "2026-01-01"
+  },
+  {
+    "id": "p2",
+    "name": "Anil Electrical Works",
+    "email": "anil@meetly.pro",
+    "role": "provider",
+    "createdAt": "2026-01-05"
+  },
+  {
+    "id": "p4",
+    "name": "Kochi Cleaning Crew",
+    "email": "clean@meetly.pro",
+    "role": "provider",
+    "createdAt": "2026-01-10"
+  },
+  {
+    "id": "p7",
+    "name": "Express Plumbers Kochi",
+    "email": "plumbing@meetly.pro",
+    "role": "provider",
+    "createdAt": "2026-01-12"
+  },
+  {
+    "id": "admin1",
+    "name": "System Admin",
+    "email": "admin@meetly.com",
+    "role": "admin",
+    "createdAt": "2026-01-01"
+  }
+]

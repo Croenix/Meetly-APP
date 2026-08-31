@@ -10,6 +10,18 @@ class HiveLocalDatabase {
   static final HiveLocalDatabase instance = HiveLocalDatabase._internal();
   HiveLocalDatabase._internal();
 
+  // Save a single String
+  Future<void> saveString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_keyPrefix$key', value);
+  }
+
+  // Get a single String
+  Future<String?> getString(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('$_keyPrefix$key');
+  }
+
   // Save a list of Strings (e.g. categories)
   Future<void> saveStringList(String key, List<String> list) async {
     final prefs = await SharedPreferences.getInstance();
@@ -84,6 +96,9 @@ class HiveLocalDatabase {
       return [];
     }
   }
+
+  // Alias helper for queue retrieval
+  Future<List<Map<String, dynamic>>> getPendingQueue() => getQueue();
 
   // Clear pending queue
   Future<void> clearQueue() async {

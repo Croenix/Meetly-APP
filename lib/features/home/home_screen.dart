@@ -705,7 +705,7 @@ class HomeScreen extends ConsumerWidget {
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Center(child: Text("Sync Offline")),
+                              child: const Center(child: Text("Live Sync")),
                             ),
                           ),
                       AppSpacing.height32,

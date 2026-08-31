@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -31,12 +30,7 @@ import '../features/provider_portal/provider_dashboard_screen.dart';
 import '../features/provider_portal/provider_services_screen.dart';
 import '../features/provider_portal/provider_profile_screen.dart' as provider_portal;
 
-// Screens implemented in Phase 6
-import '../features/admin_portal/admin_dashboard_screen.dart';
-import '../features/admin_portal/admin_providers_screen.dart';
-import '../features/admin_portal/admin_bookings_screen.dart';
-import '../features/admin_portal/admin_categories_screen.dart';
-import '../features/admin_portal/admin_reviews_screen.dart';
+// Phase 6: Admin Portal hosted on Node Server Web Console
 import '../features/admin_portal/admin_restricted_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -145,70 +139,40 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const ProfileScreen(),
     ),
 
-    // Admin Screens
+    // Admin Screens - Redirect to AdminRestrictedScreen (Admin console is hosted strictly on Node.js server)
     GoRoute(
       path: '/admin-restricted',
       builder: (context, state) => const AdminRestrictedScreen(),
     ),
     GoRoute(
       path: '/admin',
-      redirect: (context, state) {
-        if (!kIsWeb) {
-          return '/admin-restricted';
-        }
-        return null;
-      },
-      builder: (context, state) => const AdminDashboardScreen(),
+      redirect: (context, state) => '/admin-restricted',
+      builder: (context, state) => const AdminRestrictedScreen(),
     ),
     GoRoute(
       path: '/admin/providers',
-      redirect: (context, state) {
-        if (!kIsWeb) {
-          return '/admin-restricted';
-        }
-        return null;
-      },
-      builder: (context, state) => const AdminProvidersScreen(),
+      redirect: (context, state) => '/admin-restricted',
+      builder: (context, state) => const AdminRestrictedScreen(),
     ),
     GoRoute(
       path: '/admin/users',
-      redirect: (context, state) {
-        if (!kIsWeb) {
-          return '/admin-restricted';
-        }
-        return null;
-      },
-      builder: (context, state) => const PlaceholderScreen(title: 'Manage Users'),
+      redirect: (context, state) => '/admin-restricted',
+      builder: (context, state) => const AdminRestrictedScreen(),
     ),
     GoRoute(
       path: '/admin/bookings',
-      redirect: (context, state) {
-        if (!kIsWeb) {
-          return '/admin-restricted';
-        }
-        return null;
-      },
-      builder: (context, state) => const AdminBookingsScreen(),
+      redirect: (context, state) => '/admin-restricted',
+      builder: (context, state) => const AdminRestrictedScreen(),
     ),
     GoRoute(
       path: '/admin/categories',
-      redirect: (context, state) {
-        if (!kIsWeb) {
-          return '/admin-restricted';
-        }
-        return null;
-      },
-      builder: (context, state) => const AdminCategoriesScreen(),
+      redirect: (context, state) => '/admin-restricted',
+      builder: (context, state) => const AdminRestrictedScreen(),
     ),
     GoRoute(
       path: '/admin/reviews',
-      redirect: (context, state) {
-        if (!kIsWeb) {
-          return '/admin-restricted';
-        }
-        return null;
-      },
-      builder: (context, state) => const AdminReviewsScreen(),
+      redirect: (context, state) => '/admin-restricted',
+      builder: (context, state) => const AdminRestrictedScreen(),
     ),
   ],
 );

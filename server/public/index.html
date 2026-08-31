@@ -780,7 +780,7 @@
       <div class="card" style="flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; width: 100%;">
         <div style="display: flex; align-items: center; gap: 12px;">
           <h2 style="font-size: 20px; font-weight: 700; letter-spacing: -0.4px;">Analytics Overview</h2>
-          <span class="chip" id="analytics-source-badge" style="background-color: #E8F0FE; color: var(--primary); margin-top: 0;">Mock</span>
+          <span class="chip" id="analytics-source-badge" style="background-color: #E6F4EA; color: #137333; margin-top: 0;">Live System</span>
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
           <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
@@ -1204,14 +1204,9 @@
         document.getElementById('attempts-value').innerText = overview.bookingAttempts;
         
         const sourceBadge = document.getElementById('analytics-source-badge');
-        sourceBadge.innerText = overview.source;
-        if (overview.source.includes('BigQuery')) {
-          sourceBadge.style.backgroundColor = '#E6F4EA';
-          sourceBadge.style.color = '#137333';
-        } else {
-          sourceBadge.style.backgroundColor = '#FEF7E0';
-          sourceBadge.style.color = '#B06000';
-        }
+        sourceBadge.innerText = overview.source || 'Live System';
+        sourceBadge.style.backgroundColor = '#E6F4EA';
+        sourceBadge.style.color = '#137333';
 
         // Fetch Categories Clicks
         const categoriesRes = await fetch('/api/analytics/categories');

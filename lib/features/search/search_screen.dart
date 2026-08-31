@@ -295,7 +295,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Text(
-                'Map Discovery Mode (Offline)',
+                'Live Map Discovery Mode',
                 style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),

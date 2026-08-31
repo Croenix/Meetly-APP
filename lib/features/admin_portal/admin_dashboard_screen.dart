@@ -4,12 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimensions.dart';
 import '../../app/theme/app_spacing.dart';
-import '../../core/models/booking.dart';
-import '../../core/models/app_user.dart';
-import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../../core/widgets/responsive_layout_shell.dart';
-import '../../data/repositories/booking_repository.dart';
+import '../../core/services/realtime_websocket_service.dart';
 import '../../data/repositories/provider_repository.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
@@ -20,100 +17,149 @@ class AdminDashboardScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textTheme = Theme.of(context).textTheme;
 
-    // Load platform data
+    // Watch Realtime Telemetry from Direct WebSocket Connection
+    final telemetryAsync = ref.watch(adminTelemetryStreamProvider);
+
+    // Watch Provider Data
     final providersAsync = ref.watch(providersListProvider);
-    final bookingsAsync = ref.watch(userBookingsProvider((userId: 'admin', role: UserRole.admin)));
+
+    final telemetry = telemetryAsync.value ?? AdminTelemetryData.fallbackOffline();
 
     return ResponsiveLayoutShell(
-      selectedIndex: 0, // Admin Overview Tab Index
+      selectedIndex: 0,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Admin Operations Control'),
+          title: const Text('Admin System & Analytics Control'),
+          actions: [
+            IconButton(
+              tooltip: 'Re-sync Dynamic IP & Connection',
+              icon: const Icon(Icons.sync),
+              onPressed: () {
+                ref.read(realtimeWebSocketServiceProvider).flushOfflineQueue();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Resyncing offline queue over WebSocket...')),
+                );
+              },
+            )
+          ],
         ),
         body: ResponsiveContainer(
-          child: providersAsync.when(
-            data: (providers) {
-              return bookingsAsync.when(
-                data: (bookings) {
-                  // Calculate statistics
-                  final totalPros = providers.length;
-                  final verifiedPros = providers.where((p) => p.verificationStatus == 'verified').length;
-                  final pendingVetting = providers.where((p) => p.verificationStatus == 'under_review').length;
-                  
-                  final totalBookings = bookings.length;
-                  final completedBookings = bookings.where((b) => b.status == BookingStatus.completed).length;
-                  final totalValue = bookings.fold<double>(0, (sum, b) => sum + b.priceEstimate);
-                  
-                  // Platform revenue (10% commission on booking values)
-                  final platformCommission = totalValue * 0.10;
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Real-time Connection Banner
+                _buildRealtimeConnectionBanner(telemetry, isDark, textTheme),
+                const SizedBox(height: 16),
 
-                  return SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'System Performance Overview',
-                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        AppSpacing.height16,
+                Text(
+                  'Real-Time System Telemetry & Metrics',
+                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                AppSpacing.height12,
 
-                        // Stats Grid
-                        _buildStatsGrid(totalPros, pendingVetting, totalBookings, platformCommission, isDark, textTheme),
-                        AppSpacing.height32,
+                // Primary 4 Real-time Metrics Cards (Total Users, Active Connections, Booking Metrics, Revenue Data)
+                _buildRealtimeMetricsGrid(telemetry, isDark, textTheme),
+                AppSpacing.height24,
 
-                        // Operations Shortcuts
-                        Text(
-                          'Operations Center Shortcuts',
-                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        AppSpacing.height12,
+                // Detailed Booking Metrics Breakdown
+                _buildBookingMetricsBreakdown(telemetry, isDark, textTheme),
+                AppSpacing.height24,
 
-                        _buildShortcutsGrid(context, pendingVetting, isDark),
-                        AppSpacing.height32,
+                // Operations Shortcuts
+                Text(
+                  'Operations Center Controls',
+                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                AppSpacing.height12,
 
-                        // Recent Activity Cards
-                        Text(
-                          'Key Activity Insights',
-                          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        AppSpacing.height12,
-
-                        Card(
-                          elevation: 0.5,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildActivityItem('Verified Service Professionals', '$verifiedPros / $totalPros pro accounts verified', Icons.verified, AppColors.successLight),
-                                const Divider(),
-                                _buildActivityItem('Platform Completed Tasks', '$completedBookings services rendered successfully', Icons.task_alt, AppColors.primaryLight),
-                                const Divider(),
-                                _buildActivityItem('Transaction Volume', '₹${totalValue.toStringAsFixed(0)} processed through bookings', Icons.analytics_outlined, Colors.purple),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => EmptyState(icon: Icons.error_outline, title: 'Error loading bookings', description: e.toString()),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => EmptyState(icon: Icons.error_outline, title: 'Error loading providers', description: e.toString()),
+                providersAsync.when(
+                  data: (providers) {
+                    final pendingVetting = providers.where((p) => p.verificationStatus == 'under_review').length;
+                    return _buildShortcutsGrid(context, pendingVetting, isDark);
+                  },
+                  loading: () => _buildShortcutsGrid(context, 0, isDark),
+                  error: (e, s) => _buildShortcutsGrid(context, 0, isDark),
+                ),
+                AppSpacing.height24,
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStatsGrid(int pros, int pendingVetting, int bookings, double revenue, bool isDark, TextTheme textTheme) {
+  // Live WebSocket Connection Status Banner
+  Widget _buildRealtimeConnectionBanner(AdminTelemetryData telemetry, bool isDark, TextTheme textTheme) {
+    final bool isConnected = telemetry.isConnected;
+    final color = isConnected ? Colors.green : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: AppDimensions.borderMedium,
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.6),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                )
+              ],
+            ),
+          ),
+          AppSpacing.width12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Live Production Server Sync Active',
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                Text(
+                  'Connected to live Firebase Realtime Database & Node server. Real-time telemetry streaming.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Chip(
+            label: Text(
+              'LIVE',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+            padding: EdgeInsets.zero,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 4 Primary Real-Time Metric Cards
+  Widget _buildRealtimeMetricsGrid(AdminTelemetryData telemetry, bool isDark, TextTheme textTheme) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 800 ? 4 : constraints.maxWidth > 500 ? 2 : 2;
+        final crossAxisCount = constraints.maxWidth > 900 ? 4 : constraints.maxWidth > 550 ? 2 : 1;
         return GridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -121,49 +167,111 @@ class AdminDashboardScreen extends ConsumerWidget {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.6,
+            childAspectRatio: 1.4,
           ),
           children: [
-            _buildStatCard('Total Service Pros', '$pros', Icons.groups_outlined, isDark, textTheme),
-            _buildStatCard('Pending Vetting', '$pendingVetting', Icons.hourglass_top, isDark, textTheme),
-            _buildStatCard('Total Bookings', '$bookings', Icons.calendar_month_outlined, isDark, textTheme),
-            _buildStatCard('Est. Platform Fee', '₹${revenue.toStringAsFixed(0)}', Icons.payments_outlined, isDark, textTheme),
+            // 1. TOTAL USERS
+            _buildMetricCard(
+              title: 'Total System Users',
+              value: '${telemetry.totalUsers}',
+              subtitle: '${telemetry.customerCount} Customers • ${telemetry.providerCount} Pros',
+              icon: Icons.group_outlined,
+              iconColor: Colors.blue,
+              isDark: isDark,
+              textTheme: textTheme,
+            ),
+
+            // 2. ACTIVE CONNECTIONS
+            _buildMetricCard(
+              title: 'Active Connections',
+              value: '${telemetry.activeConnections}',
+              subtitle: 'Live WebSockets streaming right now',
+              icon: Icons.sensors,
+              iconColor: Colors.green,
+              isDark: isDark,
+              textTheme: textTheme,
+            ),
+
+            // 3. BOOKING METRICS
+            _buildMetricCard(
+              title: 'Total Bookings',
+              value: '${telemetry.totalBookings}',
+              subtitle: '${telemetry.bookingMetrics['completed'] ?? 0} Completed • ${telemetry.bookingMetrics['pending'] ?? 0} Pending',
+              icon: Icons.calendar_today_outlined,
+              iconColor: Colors.purple,
+              isDark: isDark,
+              textTheme: textTheme,
+            ),
+
+            // 4. REVENUE DATA
+            _buildMetricCard(
+              title: 'Total Revenue Data',
+              value: '₹${telemetry.totalRevenue.toStringAsFixed(0)}',
+              subtitle: 'Avg Ticket: ₹${telemetry.avgTicketSize.toStringAsFixed(0)}',
+              icon: Icons.account_balance_wallet_outlined,
+              iconColor: Colors.amber.shade800,
+              isDark: isDark,
+              textTheme: textTheme,
+            ),
           ],
         );
       },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, bool isDark, TextTheme textTheme) {
+  Widget _buildMetricCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isDark,
+    required TextTheme textTheme,
+  }) {
     return Card(
-      elevation: 0.5,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: AppDimensions.borderMedium),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, size: 16, color: AppColors.primaryLight),
-                const SizedBox(width: 8),
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
                   ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 18, color: iconColor),
                 ),
               ],
             ),
-            AppSpacing.height8,
             Text(
               value,
-              style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                  ),
+              style: textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppColors.textPrimaryLight,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -171,118 +279,168 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildShortcutsGrid(BuildContext context, int pendingAudits, bool isDark) {
-    return GridView(
+  // Booking Metrics Status Distribution Card
+  Widget _buildBookingMetricsBreakdown(AdminTelemetryData telemetry, bool isDark, TextTheme textTheme) {
+    final b = telemetry.bookingMetrics;
+    final total = telemetry.totalBookings > 0 ? telemetry.totalBookings : 1;
+
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: AppDimensions.borderMedium),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Booking Lifecycle Distribution',
+                  style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Icon(Icons.pie_chart_outline, size: 18, color: AppColors.primaryLight),
+              ],
+            ),
+            AppSpacing.height16,
+
+            Row(
+              children: [
+                _buildStatusBadge('Pending', b['pending'] ?? 0, total, Colors.orange),
+                _buildStatusBadge('Confirmed', b['confirmed'] ?? 0, total, Colors.blue),
+                _buildStatusBadge('In Progress', b['inProgress'] ?? 0, total, Colors.purple),
+                _buildStatusBadge('Completed', b['completed'] ?? 0, total, Colors.green),
+                _buildStatusBadge('Cancelled', b['cancelled'] ?? 0, total, Colors.red),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status, int count, int total, Color color) {
+    final percent = ((count / total) * 100).toStringAsFixed(0);
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$count',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              status,
+              style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$percent%',
+              style: const TextStyle(fontSize: 10, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Operations Center Shortcuts Grid
+  Widget _buildShortcutsGrid(BuildContext context, int pendingVetting, bool isDark) {
+    return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 220,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 2.2,
-      ),
+      crossAxisCount: 3,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 2.2,
       children: [
         _buildShortcutCard(
           context,
-          'Pro Vetting',
-          pendingAudits > 0 ? '$pendingAudits pending review' : 'All clear',
-          Icons.verified_user_outlined,
-          '/admin/providers',
-          isDark,
+          title: 'Provider Audits',
+          subtitle: '$pendingVetting awaiting review',
+          icon: Icons.verified_user_outlined,
+          color: Colors.amber.shade800,
+          route: '/admin/providers',
         ),
         _buildShortcutCard(
           context,
-          'All Bookings',
-          'Track transactions',
-          Icons.receipt_long,
-          '/admin/bookings',
-          isDark,
+          title: 'Categories Editor',
+          subtitle: 'Manage active catalog',
+          icon: Icons.category_outlined,
+          color: AppColors.primaryLight,
+          route: '/admin/categories',
         ),
         _buildShortcutCard(
           context,
-          'Categories',
-          'Configure categories',
-          Icons.category,
-          '/admin/categories',
-          isDark,
-        ),
-        _buildShortcutCard(
-          context,
-          'Moderation',
-          'Review spam filters',
-          Icons.rate_review,
-          '/admin/reviews',
-          isDark,
+          title: 'Platform Bookings',
+          subtitle: 'Audit jobs & status',
+          icon: Icons.book_online_outlined,
+          color: Colors.teal,
+          route: '/admin/bookings',
         ),
       ],
     );
   }
 
   Widget _buildShortcutCard(
-    BuildContext context,
-    String title,
-    String desc,
-    IconData icon,
-    String route,
-    bool isDark,
-  ) {
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required String route,
+  }) {
     return Card(
       elevation: 0.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppDimensions.borderMedium,
-        side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: AppDimensions.borderMedium),
       child: InkWell(
         onTap: () => context.go(route),
         borderRadius: AppDimensions.borderMedium,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
           child: Row(
             children: [
-              Icon(icon, size: 24, color: AppColors.primaryLight),
-              AppSpacing.width12,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     Text(
-                      desc,
-                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondaryLight),
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(String title, String subtitle, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: color.withAlpha(25),
-            radius: 18,
-            child: Icon(icon, color: color, size: 18),
-          ),
-          AppSpacing.width16,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

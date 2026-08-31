@@ -1,0 +1,52 @@
+[
+  {
+    "id": "b_101",
+    "customerId": "u1",
+    "customerName": "Alex Johnson",
+    "providerId": "p1",
+    "serviceTitle": "Home Rewiring & Switchboard Repair",
+    "bookingDate": "2026-08-25",
+    "status": "completed",
+    "totalAmount": 499
+  },
+  {
+    "id": "b_102",
+    "customerId": "u2",
+    "customerName": "Maria Garcia",
+    "providerId": "p4",
+    "serviceTitle": "Full Home Deep Cleaning",
+    "bookingDate": "2026-08-28",
+    "status": "completed",
+    "totalAmount": 1299
+  },
+  {
+    "id": "b_103",
+    "customerId": "u3",
+    "customerName": "Devon Smith",
+    "providerId": "p7",
+    "serviceTitle": "Emergency Pipe Leak Fix",
+    "bookingDate": "2026-08-30",
+    "status": "confirmed",
+    "totalAmount": 349
+  },
+  {
+    "id": "b_104",
+    "customerId": "u1",
+    "customerName": "Alex Johnson",
+    "providerId": "p2",
+    "serviceTitle": "Inverter Installation",
+    "bookingDate": "2026-08-31",
+    "status": "inProgress",
+    "totalAmount": 799
+  },
+  {
+    "id": "b_105",
+    "customerId": "u2",
+    "customerName": "Maria Garcia",
+    "providerId": "p1",
+    "serviceTitle": "AC Wiring Check",
+    "bookingDate": "2026-09-02",
+    "status": "pending",
+    "totalAmount": 299
+  }
+]

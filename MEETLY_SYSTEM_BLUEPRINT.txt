@@ -1,0 +1,273 @@
+================================================================================
+                        MEETLY - SYSTEM BLUEPRINT & TECHNICAL SPECIFICATION
+                                        VERSION 1.0.0
+================================================================================
+
+1. EXECUTIVE OVERVIEW & PLATFORM IDENTIFICATION
+--------------------------------------------------------------------------------
+Product Name         : Meetly (Service Booking & Professional Collaboration Platform)
+Tagline              : Connect. Collaborate. Grow.
+Application Type     : Cross-Platform Multi-Role Service Marketplace
+Target User Roles    : 1. Customer (Service Seekers)
+                       2. Service Provider / Professional (Contractors, Electricians, Plumbers, Cleaners, etc.)
+                       3. Administrator (System Analytics, Category & Banner Management, Provider Auditing)
+Primary Tech Stack   : Flutter (Dart 3.13+), Node.js (Express), Firebase Realtime Database, Google BigQuery, Riverpod, GoRouter, Hive Local Storage.
+
+--------------------------------------------------------------------------------
+2. SUPPORTED PLATFORMS & RUNTIME SPECIFICATIONS
+--------------------------------------------------------------------------------
+Supported Target Platforms:
+  • Android          : Min SDK 21 (Android 5.0+), Target SDK 34+
+  • iOS              : iOS 12.0+ (Universal App, iPhone & iPad)
+  • Web              : Modern Browsers (Chrome, Safari, Firefox, Edge) with responsive PWA support
+  • Desktop (Windows): Windows 10/11 x64 Native Win32 Client
+  • Desktop (macOS)  : macOS 11+ Apple Silicon & Intel Native Client
+
+Package & Asset Identification:
+  • Package Name     : com.meetly.app
+  • Version          : 1.0.0+1
+  • Brand Icons      : 
+      - App Icon     : assets/images/app_icon.png (1024x1024, rescaled 1.02x centered)
+      - Brand Logo   : assets/images/brand_icon.png / brand_logo.png (1024x436)
+
+--------------------------------------------------------------------------------
+3. SYSTEM ARCHITECTURE & DESIGN PATTERNS
+--------------------------------------------------------------------------------
+Architectural Pattern: Decoupled MVVM (Model-View-ViewModel) + Repository Pattern + Reactive Riverpod Providers.
+
+Layers Blueprint:
+  1. Presentation Layer (Views / Widgets):
+     - Located in `lib/features/`.
+     - Zero direct data mutation. Widgets watch Riverpod providers (`ref.watch`) and emit actions (`ref.read`).
+     - Fully responsive UI supporting Mobile, Tablet, and Desktop layouts via `ResponsiveLayoutShell`.
+
+  2. State Management Layer (Riverpod ViewModels):
+     - Reactive, compile-time safe state management (`flutter_riverpod: ^2.6.1`).
+     - Family providers parameterize dynamic streams (e.g. `providerServicesProvider(providerId)`, `userBookingsProvider`).
+     - Automatic caching, invalidation, and state propagation across widgets.
+
+  3. Repository & Data Sourcing Layer:
+     - Abstract Interfaces (`CategoryRepository`, `ProviderRepository`, `BookingRepository`, `AuthRepository`, `MessageRepository`).
+     - Real-time Hybrid Implementation: Tries Firebase RTDB / REST Backend first; falls back gracefully to Hive offline storage and local JSON seeds.
+     - Offline Sync Queue: Unsent offline actions are automatically queued in Hive and synced when internet connectivity returns.
+
+--------------------------------------------------------------------------------
+4. CORE DOMAIN DATA MODELS & SCHEMAS
+--------------------------------------------------------------------------------
+1. AppUser (`lib/core/models/app_user.dart`):
+   - `id` (String): Unique user identifier
+   - `email` (String): User email address
+   - `name` (String): Display name
+   - `phone` (String): Contact phone number
+   - `role` (UserRole enum): `customer`, `provider`, `admin`
+   - `avatarUrl` (String): Avatar image URL
+   - `location` (String): City / region name
+   - `bio` (String): Brief biography or description
+   - `favorites` (List<String>): List of favorite provider IDs
+   - `createdAt` (DateTime): Registration timestamp
+
+2. ServiceProvider (`lib/core/models/service_provider.dart`):
+   - `id` (String): Provider unique ID (e.g. `p1`)
+   - `userId` (String): Associated user ID
+   - `businessName` (String): Business / trade name
+   - `profession` (String): Professional title (e.g., Certified Electrician)
+   - `category` (String): Main service category (e.g., Electrical)
+   - `rating` (double): Average customer rating (0.0 - 5.0)
+   - `reviewCount` (int): Total number of customer reviews
+   - `startingPrice` (double): Base service price in local currency
+   - `verified` (bool): Administrative verification flag
+   - `bio` (String): Business overview
+   - `portfolioImages` (List<String>): Project portfolio image URLs
+   - `workingHours` (Map<String, WorkingHoursDay>): Weekly availability schedule
+   - `serviceArea` (String): Geographic operating area
+   - `phone` (String): Business contact number
+   - `location` (String): Base location / city
+
+3. ServiceItem (`lib/core/models/service_item.dart`):
+   - `id` (String): Service item ID
+   - `providerId` (String): Provider owning this service
+   - `title` (String): Service title (e.g., Switchboard Repair)
+   - `description` (String): Service description
+   - `price` (double): Fixed or estimated price
+   - `durationMinutes` (int): Expected completion time
+   - `category` (String): Category tag
+
+4. Booking (`lib/core/models/booking.dart`):
+   - `id` (String): Unique booking reference
+   - `customerId` (String): Customer user ID
+   - `providerId` (String): Assigned service provider ID
+   - `serviceId` (String): Booked service ID
+   - `serviceTitle` (String): Title of booked service
+   - `bookingDate` (DateTime): Scheduled service date & time
+   - `status` (BookingStatus enum): `pending`, `confirmed`, `inProgress`, `completed`, `cancelled`
+   - `totalAmount` (double): Total booking cost
+   - `address` (String): Customer service location address
+   - `notes` (String): Special customer instructions
+   - `createdAt` (DateTime): Creation timestamp
+
+5. ChatMessage (`lib/core/models/chat_message.dart`):
+   - `id` (String): Message ID
+   - `senderId` (String): Sender user ID
+   - `receiverId` (String): Receiver user ID
+   - `content` (String): Text message body
+   - `timestamp` (DateTime): Message sent time
+   - `isRead` (bool): Read status flag
+
+6. Review (`lib/core/models/review.dart`):
+   - `id` (String): Review ID
+   - `providerId` (String): Target provider ID
+   - `customerId` (String): Reviewer user ID
+   - `customerName` (String): Reviewer display name
+   - `rating` (double): Star rating (1.0 to 5.0)
+   - `comment` (String): Written feedback
+   - `createdAt` (DateTime): Review date
+
+7. NotificationItem (`lib/core/models/notification_item.dart`):
+   - `id` (String): Notification ID
+   - `userId` (String): Recipient user ID
+   - `title` (String): Notification headline
+   - `body` (String): Notification message
+   - `timestamp` (DateTime): Time created
+   - `isRead` (bool): Read indicator
+
+--------------------------------------------------------------------------------
+5. FRONTEND APPLICATION BLUEPRINT (FLUTTER / DART)
+--------------------------------------------------------------------------------
+Navigation Routes (`lib/app/router.dart`):
+  • `/splash`                : Boot animation & authentication routing check
+  • `/onboarding`            : New user feature highlight carousel
+  • `/login`                 : Secure email/password & Google Sign-In portal
+  • `/register`              : Multi-role account registration
+  • `/home`                  : Customer home dashboard with categories & banners
+  • `/search`                : Search & filter engine with geolocation sorting
+  • `/category/:id`          : Category-filtered provider listing
+  • `/provider/:id`          : Public provider profile, portfolio, reviews & booking CTA
+  • `/booking/create`        : Multi-step booking wizard stepper
+  • `/booking/:id`           : Live booking timeline, status & address details
+  • `/bookings`              : Customer booking history list
+  • `/messages`              : Active chat thread conversations list
+  • `/messages/:id`          : Real-time messaging screen
+  • `/favorites`             : Saved favorite service providers
+  • `/notifications`         : User alerts tray
+  • `/profile`               : User account profile & settings editor
+  • `/provider/dashboard`    : Provider management portal overview
+  • `/provider/services`     : Provider service catalog manager
+  • `/provider/availability` : Provider schedule & working hours configuration
+  • `/provider/bookings`     : Provider incoming job requests & status controls
+  • `/admin/dashboard`       : Admin metrics overview & BigQuery telemetry
+  • `/admin/providers`       : Admin provider verification & auditing
+  • `/admin/bookings`        : Platform-wide job monitoring
+  • `/admin/categories`      : Dynamic category CRUD editor
+  • `/admin/reviews`         : Feedback moderation & review auditing
+  • `/admin-restricted`      : Route guard fallback for unauthorized access
+
+--------------------------------------------------------------------------------
+6. BACKEND SERVER BLUEPRINT (NODE.JS / EXPRESS / BIGQUERY)
+--------------------------------------------------------------------------------
+Server File: `server/index.js`
+Runtime Environment: Node.js (Port 5000 by default)
+Key Technologies: Express.js, CORS, Body-Parser, Firebase Admin SDK, Google BigQuery.
+
+Server Startup Logic:
+  1. Loads regional Firebase RTDB instance: `https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app`
+  2. Initializes Firebase Admin SDK with `service-account.json` or fallback credentials.
+  3. Pre-seeds local file databases (`settings.json`, `categories.json`, `providers.json`, `banners.json`).
+  4. Publishes active server IP/URL to Firebase RTDB node `/server_url`.
+  5. Syncs initial JSON state to Firebase RTDB nodes `/settings`, `/categories`, `/providers`, `/banners`.
+
+BigQuery Telemetry Integration (`server/bigquery_service.js`):
+  • Captures user navigation events, category clicks, and booking completions.
+  • Generates analytics summaries (`/api/analytics/overview`, `/api/analytics/categories`).
+
+--------------------------------------------------------------------------------
+7. DATABASE & PERSISTENCE ARCHITECTURE
+--------------------------------------------------------------------------------
+1. Primary Database (Cloud Realtime):
+   - Engine: Firebase Realtime Database (Asia-Southeast1 Regional Cluster)
+   - Database URL: `https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app`
+   - Nodes:
+       `/server_url` : Active backend server base URL
+       `/settings`   : Dynamic app banners, promo titles, and discounts
+       `/categories` : Platform service category array
+       `/providers`  : Verified service provider catalog
+       `/banners`    : Promotional banner sliders
+       `/bookings`   : Real-time user job bookings
+       `/messages`   : Real-time user messaging threads
+
+2. Local Client Storage (Offline-First Engine):
+   - Engine: Hive & SharedPreferences (`lib/core/database/local_database.dart`)
+   - Function: Instant cached reads, offline write queues, persistent session tokens.
+   - Sync Mechanism: Automatically replays pending offline actions upon network re-establishment.
+
+3. Server Local Storage (Fallback Persistence):
+   - Location: `server/*.json` (`settings.json`, `categories.json`, `providers.json`, `banners.json`)
+   - Function: Resilient fallback dataset if network connection to cloud RTDB is interrupted.
+
+--------------------------------------------------------------------------------
+8. COMPLETE REST API & REALTIME DATABASE ENDPOINTS
+--------------------------------------------------------------------------------
+REST API Endpoints (Base URL: `http://localhost:5000` or dynamic `/server_url`):
+
+  [GET]  /api/settings           : Retrieve current promotional settings & banners
+  [POST] /api/settings           : Update promotional settings (Syncs to Firebase)
+  [GET]  /api/categories         : List all active service categories
+  [POST] /api/categories         : Add new category (Syncs to Firebase)
+  [DELETE] /api/categories/:name : Remove category by name (Syncs to Firebase)
+  [GET]  /api/banners            : Fetch promotional banner list
+  [POST] /api/banners            : Create or update banner item (Syncs to Firebase)
+  [DELETE] /api/banners/:id      : Delete banner item by ID (Syncs to Firebase)
+  [GET]  /api/providers          : List all service providers
+  [GET]  /api/providers/:id      : Get detailed provider profile by ID
+  [POST] /api/providers          : Register or update provider profile (Syncs to Firebase)
+  [GET]  /api/analytics/overview : Get aggregated BigQuery system metrics
+  [GET]  /api/analytics/categories : Get category click analytics distribution
+  [POST] /api/analytics/event    : Record custom analytical event telemetry
+
+--------------------------------------------------------------------------------
+9. ADMIN PORTAL & PROVIDER PORTAL SPECIFICATIONS
+--------------------------------------------------------------------------------
+Admin Portal (`lib/features/admin_portal/`):
+  • System Overview Dashboard: Real-time total users, total bookings, active revenue, BigQuery metrics.
+  • Provider Auditing: Review submitted contractor documentation, toggle verification badges (`verified: true/false`).
+  • Category Management: Add/edit/delete service categories with automatic RTDB broadcast to all clients.
+  • Banner Management: Customize home screen promotional carousels & discounts.
+  • Access Control: Protected by `AdminRestrictedScreen` guard checking `AppUser.role == UserRole.admin`.
+
+Provider Portal (`lib/features/provider_portal/`):
+  • Business Dashboard: Active job requests, monthly revenue chart, rating summary.
+  • Service Catalog Manager: Add/edit custom service offerings, custom prices, completion durations.
+  • Schedule Builder: Weekly working hours configuration (`WorkingHoursDay` start/end times).
+  • Job Request Controls: Accept, reject, start, and complete customer bookings in real-time.
+
+--------------------------------------------------------------------------------
+10. END-TO-END OPERATIONAL FLOWS & STATE SYNCHRONIZATION
+--------------------------------------------------------------------------------
+1. Authentication & Onboarding Flow:
+   Customer/Provider opens app -> `SplashScreen` checks session -> If new user: `OnboardingScreen` -> `LoginScreen` / `RegisterScreen` -> Firebase Auth authenticates credential -> Fetch user profile from database -> Redirect to `/home` (Customer), `/provider/dashboard` (Provider), or `/admin/dashboard` (Admin).
+
+2. Booking Lifecycle Flow:
+   Customer selects Provider & Service -> Navigates to `/booking/create` -> Selects date, time slot, enters address & notes -> Confirms booking -> New `Booking` item written to Firebase RTDB `/bookings` & local Hive database -> State invalidated via `userBookingsProvider` -> Provider notified immediately -> Provider accepts job -> Status changes to `confirmed` -> Service delivered -> Status changes to `completed` -> Customer prompted for `Review`.
+
+3. Real-Time Messaging Flow:
+   User taps "Chat" on provider profile -> Opens `/messages/:id` -> Typing message executes `sendMessage()` -> Appends `ChatMessage` to RTDB thread -> Recipient app receives real-time snapshot listener update -> Speech bubble rendered reactively via Riverpod provider.
+
+4. Offline-First Queue Sync Flow:
+   Device loses internet -> Customer creates category/booking/profile update -> Local database saves item immediately to Hive & pushes command to `pendingQueue` -> App UI reflects change without blocking -> Internet restored -> `syncPendingQueue()` iterates queued requests, pushes to Firebase RTDB, and clears queue.
+
+--------------------------------------------------------------------------------
+11. DEPLOYMENT, CONFIGURATION & ENVIRONMENT SETUP
+--------------------------------------------------------------------------------
+Local Development Commands:
+  • Flutter Client : `flutter run -d chrome` (or `flutter run -d windows` / `android` / `ios`)
+  • Node Server    : `cd server && node index.js`
+  • Asset Generation : `dart run flutter_launcher_icons`
+  • Static Analysis  : `flutter analyze`
+
+Firebase Configuration:
+  • Config File    : `lib/firebase_options.dart` & `firebase.json`
+  • Project ID     : `meetly-fea92`
+  • RTDB Cluster   : `asia-southeast1`
+
+================================================================================
+                              END OF BLUEPRINT DOCUMENT
+================================================================================
