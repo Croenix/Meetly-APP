@@ -367,6 +367,27 @@ wss.on('connection', (ws) => {
 });
 
 // --- REST API ENDPOINTS ---
+app.get('/api/analytics/events', async (req, res) => {
+  try {
+    const url = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/analytics_events.json';
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      if (data) {
+        const eventsList = Object.entries(data).map(([id, evt]) => ({
+          id,
+          ...evt
+        })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return res.json(eventsList);
+      }
+    }
+    res.json([]);
+  } catch (err) {
+    console.error('Error fetching analytics events from Firebase RTDB:', err.message);
+    res.json([]);
+  }
+});
+
 app.get('/api/analytics/realtime', (req, res) => {
   res.json(computeAnalytics());
 });

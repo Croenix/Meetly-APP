@@ -860,6 +860,27 @@
             <canvas id="categoryChart"></canvas>
           </div>
         </div>
+      <!-- Real-Time Firebase Analytics Event Stream -->
+      <div class="card" style="padding: 24px; box-shadow: var(--shadow-md); width: 100%; margin-top: 24px;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Firebase Analytics Live Event Stream</span>
+          <button class="chip" onclick="loadFirebaseEvents()" style="background-color: var(--primary); color: white; border: none; cursor: pointer;">Fetch Events</button>
+        </div>
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); text-align: left; color: var(--text-muted);">
+                <th style="padding: 10px;">EVENT NAME</th>
+                <th style="padding: 10px;">PLATFORM</th>
+                <th style="padding: 10px;">TIMESTAMP</th>
+                <th style="padding: 10px;">PARAMETERS / DETAILS</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-events-table-body">
+              <tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">Loading live Firebase events...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
@@ -1213,9 +1234,10 @@
         if (!categoriesRes.ok) throw new Error('Categories API failed');
         const categoriesData = await categoriesRes.json();
 
-        // Render Charts
-        renderDauChart(days, overview.dau);
+        // Render Charts & Fetch Live Events
+        renderDauChart(days, overview.dau, overview.dailyTrend);
         renderCategoryChart(categoriesData);
+        loadFirebaseEvents();
 
       } catch (err) {
         console.error('Failed to load analytics data:', err);
@@ -1223,7 +1245,7 @@
       }
     }
 
-    function renderDauChart(days, currentDau) {
+    function renderDauChart(days, currentDau, dailyTrend) {
       const ctx = document.getElementById('dauChart').getContext('2d');
       if (dauChartInstance) {
         dauChartInstance.destroy();
@@ -1234,12 +1256,14 @@
       const now = new Date();
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date(now - i * 24 * 60 * 60 * 1000);
+        const isoDate = d.toISOString().split('T')[0];
         labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-        if (i === 0) {
-          data.push(currentDau);
+        if (dailyTrend && dailyTrend[isoDate] !== undefined) {
+          data.push(dailyTrend[isoDate]);
+        } else if (i === 0) {
+          data.push(currentDau || 0);
         } else {
-          const baseline = Math.round(currentDau * (0.8 + Math.random() * 0.4));
-          data.push(baseline);
+          data.push(0);
         }
       }
 
@@ -1326,10 +1350,44 @@
       });
     }
 
+    async function loadFirebaseEvents() {
+      try {
+        const res = await fetch('/api/analytics/events');
+        if (res.ok) {
+          const events = await res.json();
+          const tbody = document.getElementById('analytics-events-table-body');
+          if (!tbody) return;
+          tbody.innerHTML = '';
+
+          if (!events || events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: var(--text-muted);">No live Firebase events recorded yet. Open the Flutter app to generate real-time events.</td></tr>';
+            return;
+          }
+
+          events.forEach(evt => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border)';
+            const paramsStr = evt.parameters ? JSON.stringify(evt.parameters) : '-';
+            const dateStr = evt.timestamp ? new Date(evt.timestamp).toLocaleString() : 'Just now';
+            tr.innerHTML = `
+              <td style="padding: 12px; font-weight: bold; color: var(--primary);">${escapeHtml(evt.name || 'event')}</td>
+              <td style="padding: 12px;"><span class="chip" style="font-size: 10px; margin: 0; background-color: rgba(99, 102, 241, 0.15); color: var(--primary);">${escapeHtml(evt.platform || 'Android')}</span></td>
+              <td style="padding: 12px; color: var(--text-muted);">${escapeHtml(dateStr)}</td>
+              <td style="padding: 12px; font-family: monospace; font-size: 11px; color: #cbd5e1;">${escapeHtml(paramsStr)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching Firebase Analytics events:', err);
+      }
+    }
+
     // Initial setup
     loadBanners();
     loadCategories();
     loadAnalytics();
+    loadFirebaseEvents();
     updateLivePreview();
   </script>
 </body>
