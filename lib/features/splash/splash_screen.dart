@@ -76,32 +76,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Beautiful Gradient Icon Logo
+              // Beautiful App Icon Logo
               Container(
-                width: 96,
-                height: 96,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryLight,
-                      AppColors.secondaryLight,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryLight.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: AppColors.primaryLight.withValues(alpha: 0.25),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     )
                   ],
                 ),
-                child: const Icon(
-                  Icons.hub_outlined, // Modern connecting-points icon representing "Meetly"
-                  size: 48,
-                  color: Colors.white,
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  'assets/images/app_icon.png',
+                  fit: BoxFit.contain,
                 ),
               )
               .animate()

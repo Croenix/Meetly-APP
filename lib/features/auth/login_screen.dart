@@ -196,10 +196,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.hub_rounded,
-                          size: 38,
-                          color: Colors.white,
+                        child: Image.asset(
+                          'assets/images/app_icon.png',
+                          width: 48,
+                          height: 48,
                         ),
                       ),
                       const SizedBox(height: 16),

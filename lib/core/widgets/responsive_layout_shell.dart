@@ -172,17 +172,10 @@ class ResponsiveLayoutShell extends ConsumerWidget {
           // Brand Logo Header
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withAlpha(30),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.hub_outlined,
-                  color: AppColors.primaryLight,
-                  size: 24,
-                ),
+              Image.asset(
+                'assets/images/app_icon.png',
+                width: 32,
+                height: 32,
               ),
               AppSpacing.width12,
               Text(
