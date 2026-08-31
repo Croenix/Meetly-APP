@@ -325,4 +325,30 @@ class SyncService {
 
     return AppSyncSettings.defaultOffline();
   }
+
+  // Dynamic Service Discovery: Fetch backend server URL from Firebase RTDB node /server_url
+  Future<String> fetchServerUrl() async {
+    try {
+      final snapshot = await _database.ref('server_url').get().timeout(const Duration(seconds: 3));
+      if (snapshot.exists && snapshot.value != null) {
+        var url = snapshot.value.toString().trim();
+        if (url.isNotEmpty) {
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+            url = url.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
+          }
+          if (kDebugMode) {
+            print("SyncService: Successfully retrieved dynamic server URL from Firebase RTDB: '$url'");
+          }
+          return url;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Failed to fetch server_url from Firebase RTDB ($e). Using default.");
+      }
+    }
+    return (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+        ? 'http://10.0.2.2:5000'
+        : 'http://localhost:5000';
+  }
 }

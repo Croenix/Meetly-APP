@@ -676,15 +676,33 @@ app.delete('/api/banners/:id', async (req, res) => {
 });
 
 // START SERVER & PUBLISH DISCOVERY ADDRESS TO FIREBASE RTDB
-server.listen(PORT, async () => {
-  console.log(`Meetly Server & WebSocket running on http://localhost:${PORT} (ws://localhost:${PORT})`);
-  
-  // Publish Dynamic Server IP to Firebase RTDB Discovery Layer
-  const localIp = 'localhost'; 
-  const serverHttpUrl = `http://${localIp}:${PORT}`;
-  const serverWsUrl = `ws://${localIp}:${PORT}`;
+const os = require('os');
 
-  console.log("Publishing dynamic server IP and WebSocket URL to Firebase Realtime Database...");
+function getLocalNetworkIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('vbox') || lowerName.includes('virtual') || lowerName.includes('vmnet')) {
+      continue;
+    }
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('192.168.56.')) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+server.listen(PORT, async () => {
+  const networkIp = getLocalNetworkIp();
+  console.log(`Meetly Server & WebSocket running on http://localhost:${PORT} (Network: http://${networkIp}:${PORT})`);
+  
+  // Publish Dynamic Server IP to Firebase RTDB Discovery Layer (/server_url & /ws_url)
+  const serverHttpUrl = `http://${networkIp}:${PORT}`;
+  const serverWsUrl = `ws://${networkIp}:${PORT}`;
+
+  console.log(`Publishing dynamic server IP (${serverHttpUrl}) and WebSocket URL (${serverWsUrl}) to Firebase Realtime Database...`);
   await syncToFirebase(FIREBASE_SERVER_URL, serverHttpUrl);
   await syncToFirebase(FIREBASE_WS_URL, serverWsUrl);
 

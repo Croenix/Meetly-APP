@@ -181,7 +181,17 @@ class RealtimeWebSocketService {
     }
   }
 
-  // Resolves the dynamic server IP / WebSocket URL from Firebase Realtime Database
+  String _sanitizeUrlForPlatform(String rawUrl) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return rawUrl
+          .replaceAll('localhost', '10.0.2.2')
+          .replaceAll('127.0.0.1', '10.0.2.2')
+          .replaceAll(RegExp(r'192\.168\.56\.\d+'), '10.0.2.2');
+    }
+    return rawUrl;
+  }
+
+  // Resolves the dynamic server IP / WebSocket URL from Firebase Realtime Database node (/server_url & /ws_url)
   Future<Map<String, String>> _resolveDynamicUrls() async {
     String httpUrl = 'http://localhost:5000';
     String wsUrl = 'ws://localhost:5000';
@@ -192,16 +202,30 @@ class RealtimeWebSocketService {
         databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
       );
 
-      final wsSnap = await db.ref('ws_url').get().timeout(const Duration(seconds: 3));
-      if (wsSnap.exists && wsSnap.value != null && wsSnap.value.toString().isNotEmpty) {
-        wsUrl = wsSnap.value.toString();
-      }
-
       final httpSnap = await db.ref('server_url').get().timeout(const Duration(seconds: 3));
       if (httpSnap.exists && httpSnap.value != null && httpSnap.value.toString().isNotEmpty) {
-        httpUrl = httpSnap.value.toString();
+        httpUrl = httpSnap.value.toString().trim();
       }
-    } catch (_) {}
+
+      final wsSnap = await db.ref('ws_url').get().timeout(const Duration(seconds: 3));
+      if (wsSnap.exists && wsSnap.value != null && wsSnap.value.toString().isNotEmpty) {
+        wsUrl = wsSnap.value.toString().trim();
+      } else if (httpUrl.isNotEmpty) {
+        wsUrl = httpUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://');
+      }
+
+      // Sanitize URL for target platform (localhost -> 10.0.2.2 on Android)
+      httpUrl = _sanitizeUrlForPlatform(httpUrl);
+      wsUrl = _sanitizeUrlForPlatform(wsUrl);
+
+      if (kDebugMode) {
+        print("RealtimeWS: Dynamic Discovery resolved '/server_url' -> $httpUrl & '/ws_url' -> $wsUrl for platform");
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("RealtimeWS: Firebase RTDB discovery warning ($e). Operating with local fallback.");
+      }
+    }
 
     return {'http': httpUrl, 'ws': wsUrl};
   }

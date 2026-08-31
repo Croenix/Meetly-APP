@@ -42,6 +42,18 @@ class ServerConnectedAvatarWidget extends ConsumerWidget {
         break;
     }
 
+    // Process Dicebear SVGs to PNG for Android ImageDecoder compatibility
+    String? processedUrl = imageUrl;
+    if (processedUrl != null) {
+      if (processedUrl.contains('/svg?seed=')) {
+        processedUrl = processedUrl.replaceAll('/svg?seed=', '/png?seed=');
+      } else if (processedUrl.endsWith('.svg')) {
+        processedUrl = null;
+      }
+    }
+
+    final diameter = radius * 2;
+
     return Tooltip(
       message: tooltipText,
       child: GestureDetector(
@@ -67,22 +79,26 @@ class ServerConnectedAvatarWidget extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: CircleAvatar(
-                radius: radius,
-                backgroundColor: const Color(0xFF6C5CE7).withValues(alpha: 0.15),
-                backgroundImage: (imageUrl != null && imageUrl!.isNotEmpty)
-                    ? NetworkImage(imageUrl!)
-                    : null,
-                child: (imageUrl == null || imageUrl!.isEmpty)
-                    ? Text(
-                        fallbackInitial.toUpperCase(),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF6C5CE7),
-                          fontSize: radius * 0.8,
-                        ),
-                      )
-                    : null,
+              child: Container(
+                width: diameter,
+                height: diameter,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.15),
+                ),
+                child: ClipOval(
+                  child: (processedUrl != null && processedUrl.isNotEmpty)
+                      ? Image.network(
+                          processedUrl,
+                          width: diameter,
+                          height: diameter,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildFallbackBadge();
+                          },
+                        )
+                      : _buildFallbackBadge(),
+                ),
               ),
             ),
 
@@ -109,6 +125,19 @@ class ServerConnectedAvatarWidget extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackBadge() {
+    return Center(
+      child: Text(
+        fallbackInitial.isNotEmpty ? fallbackInitial[0].toUpperCase() : 'U',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF6C5CE7),
+          fontSize: radius * 0.8,
         ),
       ),
     );

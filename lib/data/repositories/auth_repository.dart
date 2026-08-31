@@ -53,9 +53,24 @@ class FirebaseAuthRepository implements AuthRepository {
     try {
       final snap = await _database.ref('users').get();
       if (snap.exists && snap.value != null) {
-        final data = Map<String, dynamic>.from(snap.value as Map);
-        for (var entry in data.entries) {
-          final userMap = Map<String, dynamic>.from(entry.value as Map);
+        final raw = snap.value;
+        final List<Map<String, dynamic>> userList = [];
+
+        if (raw is Map) {
+          raw.forEach((key, val) {
+            if (val is Map) {
+              userList.add(Map<String, dynamic>.from(val));
+            }
+          });
+        } else if (raw is List) {
+          for (var item in raw) {
+            if (item is Map) {
+              userList.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+
+        for (var userMap in userList) {
           final uid = userMap['id']?.toString();
           final email = userMap['email']?.toString().toLowerCase();
 
@@ -71,7 +86,7 @@ class FirebaseAuthRepository implements AuthRepository {
               name: userMap['name'] ?? 'Meetly User',
               email: userMap['email'] ?? '',
               phone: userMap['phone'] ?? '',
-              avatarUrl: userMap['avatarUrl'] ?? 'https://api.dicebear.com/7.x/avataaars/svg?seed=${userMap['name'] ?? 'User'}',
+              avatarUrl: userMap['avatarUrl'] ?? 'https://api.dicebear.com/7.x/avataaars/png?seed=${userMap['name'] ?? 'User'}',
               role: role,
               location: userMap['location'] ?? 'Kochi',
             );
