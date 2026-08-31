@@ -627,6 +627,10 @@
         <div class="status-indicator online" id="server-status"></div>
         Server Status: Online
       </div>
+      <div class="status-badge" style="border-color: rgba(52, 211, 153, 0.3);">
+        <div class="status-indicator online" id="live-apps-header-indicator"></div>
+        Live Connected Apps: <span id="header-connected-count" style="color: var(--success); font-weight: bold; margin-left: 4px;">0</span>
+      </div>
       <div class="status-badge">
         <div class="status-indicator online" id="firebase-status"></div>
         Firebase RTDB: Connected
@@ -798,7 +802,20 @@
       </div>
 
       <!-- Stats Summary cards -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; width: 100%;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; width: 100%;">
+        <!-- Live Connected Apps Card -->
+        <div class="card" style="padding: 20px; gap: 8px; box-shadow: var(--shadow-sm); border-color: rgba(52, 211, 153, 0.3);">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Live Connected Apps</div>
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+            <span id="live-apps-count" style="font-size: 28px; font-weight: 800; color: var(--success);">0</span>
+            <span style="color: var(--text-muted); font-size: 12px; font-weight: 500;">active sessions</span>
+          </div>
+          <div style="font-size: 11px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 6px;">
+            <div class="status-indicator online" style="width: 6px; height: 6px;"></div>
+            <span>WebSocket Live Stream</span>
+          </div>
+        </div>
+
         <div class="card" style="padding: 20px; gap: 8px; box-shadow: var(--shadow-sm);">
           <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Active Users (DAU / MAU)</div>
           <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
@@ -860,6 +877,34 @@
             <canvas id="categoryChart"></canvas>
           </div>
         </div>
+      <!-- Live Connected Devices (Instant WebSocket Stream) -->
+      <div class="card" style="padding: 24px; box-shadow: var(--shadow-md); width: 100%; margin-top: 24px; border-color: rgba(52, 211, 153, 0.3);">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="status-indicator online"></div>
+            <span>Live Connected Devices Identifiers (WebSocket Stream)</span>
+          </div>
+          <span class="chip" id="connected-devices-badge" style="background-color: #E6F4EA; color: #137333;">0 Connected</span>
+        </div>
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); text-align: left; color: var(--text-muted);">
+                <th style="padding: 10px;">DEVICE ID</th>
+                <th style="padding: 10px;">DEVICE NAME</th>
+                <th style="padding: 10px;">PLATFORM</th>
+                <th style="padding: 10px;">IP ADDRESS</th>
+                <th style="padding: 10px;">CONNECTED AT</th>
+                <th style="padding: 10px;">STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="connected-devices-table-body">
+              <tr><td colspan="6" style="text-align: center; padding: 16px; color: var(--text-muted);">No live devices connected. Open the Flutter app or web client to stream connected device identifiers.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Real-Time Firebase Analytics Event Stream -->
       <div class="card" style="padding: 24px; box-shadow: var(--shadow-md); width: 100%; margin-top: 24px;">
         <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1223,6 +1268,9 @@
         document.getElementById('conversion-value').innerText = overview.conversionRate + '%';
         document.getElementById('views-value').innerText = overview.screenViews;
         document.getElementById('attempts-value').innerText = overview.bookingAttempts;
+        if (overview.activeConnections !== undefined) {
+          updateLiveConnectedAppCount(overview.activeConnections, overview.connectedDevices);
+        }
         
         const sourceBadge = document.getElementById('analytics-source-badge');
         sourceBadge.innerText = overview.source || 'Live System';
@@ -1383,11 +1431,76 @@
       }
     }
 
+    function updateLiveConnectedAppCount(count, devices) {
+      const liveAppsEl = document.getElementById('live-apps-count');
+      const headerEl = document.getElementById('header-connected-count');
+      const badgeEl = document.getElementById('connected-devices-badge');
+      if (liveAppsEl) liveAppsEl.innerText = count;
+      if (headerEl) headerEl.innerText = count;
+      if (badgeEl) badgeEl.innerText = `${count} Connected`;
+
+      if (devices) {
+        renderConnectedDevicesTable(devices);
+      }
+    }
+
+    function renderConnectedDevicesTable(devices) {
+      const tbody = document.getElementById('connected-devices-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!devices || devices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 16px; color: var(--text-muted);">No live devices connected. Open the Flutter app or web client to stream connected device identifiers in real time.</td></tr>';
+        return;
+      }
+
+      devices.forEach(dev => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+        const timeStr = dev.connectedAt ? new Date(dev.connectedAt).toLocaleTimeString() : 'Active now';
+        tr.innerHTML = `
+          <td style="padding: 12px; font-weight: bold; font-family: monospace; color: var(--primary);">${escapeHtml(dev.deviceId || 'dev_unknown')}</td>
+          <td style="padding: 12px; font-weight: 600; color: #ffffff;">${escapeHtml(dev.deviceName || 'Flutter Application')}</td>
+          <td style="padding: 12px;"><span class="chip" style="font-size: 10px; margin: 0; background-color: rgba(99, 102, 241, 0.15); color: var(--primary);">${escapeHtml(dev.platform || 'Android')}</span></td>
+          <td style="padding: 12px; color: var(--text-muted); font-family: monospace; font-size: 11px;">${escapeHtml(dev.ip || '127.0.0.1')}</td>
+          <td style="padding: 12px; color: var(--text-muted);">${escapeHtml(timeStr)}</td>
+          <td style="padding: 12px;"><span style="color: var(--success); font-weight: bold; display: flex; align-items: center; gap: 6px;"><span class="status-indicator online" style="width: 6px; height: 6px;"></span> Connected</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function initLiveWebSocket() {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}`;
+        const ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'ADMIN_TELEMETRY' && msg.data) {
+              const count = msg.data.activeConnections !== undefined ? msg.data.activeConnections : 0;
+              const devices = msg.data.connectedDevices || [];
+              updateLiveConnectedAppCount(count, devices);
+            }
+          } catch (_) {}
+        };
+
+        ws.onclose = () => {
+          setTimeout(initLiveWebSocket, 5000);
+        };
+      } catch (err) {
+        console.error('WebSocket telemetry connection error:', err);
+      }
+    }
+
     // Initial setup
     loadBanners();
     loadCategories();
     loadAnalytics();
     loadFirebaseEvents();
+    initLiveWebSocket();
     updateLivePreview();
   </script>
 </body>

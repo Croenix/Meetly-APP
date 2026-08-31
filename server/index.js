@@ -238,7 +238,15 @@ async function syncToFirebase(pathOrUrl, data) {
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let activeConnections = 0;
+const connectedClientsMap = new Map();
+
+function getConnectedDevicesList() {
+  const devices = [];
+  connectedClientsMap.forEach((info) => {
+    devices.push(info);
+  });
+  return devices;
+}
 
 function computeAnalytics() {
   const users = readJsonFile(USERS_FILE, defaultUsers);
@@ -261,9 +269,11 @@ function computeAnalytics() {
     .reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
   const avgTicketSize = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
+  const connectedDevices = getConnectedDevicesList();
 
   return {
-    activeConnections,
+    activeConnections: connectedClientsMap.size,
+    connectedDevices: connectedDevices,
     totalUsers,
     customerCount,
     providerCount,
@@ -297,9 +307,20 @@ function broadcastAnalytics() {
   });
 }
 
-wss.on('connection', (ws) => {
-  activeConnections++;
-  console.log(`[WebSocket] Client Connected. Live Active Connections: ${activeConnections}`);
+wss.on('connection', (ws, req) => {
+  const clientIp = (req && req.socket && req.socket.remoteAddress) ? req.socket.remoteAddress : '127.0.0.1';
+  const defaultClientId = 'dev_' + Math.random().toString(36).substring(2, 9);
+  
+  const initialInfo = {
+    deviceId: defaultClientId,
+    deviceName: 'Flutter Client Session',
+    platform: 'Mobile / Desktop',
+    ip: clientIp,
+    connectedAt: new Date().toISOString()
+  };
+
+  connectedClientsMap.set(ws, initialInfo);
+  console.log(`[WebSocket] Client Connected (${initialInfo.deviceId}). Live Active Connections: ${connectedClientsMap.size}`);
 
   // Send initial state immediately upon connection
   ws.send(JSON.stringify({
@@ -314,7 +335,18 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message.toString());
       console.log('[WebSocket] Received Inbound Action:', data.type);
 
-      if (data.type === 'PING') {
+      if (data.type === 'CLIENT_IDENTIFY') {
+        const existing = connectedClientsMap.get(ws) || {};
+        connectedClientsMap.set(ws, {
+          ...existing,
+          deviceId: data.deviceId || existing.deviceId,
+          deviceName: data.deviceName || existing.deviceName,
+          platform: data.platform || existing.platform,
+          connectedAt: data.connectedAt || existing.connectedAt
+        });
+        console.log(`[WebSocket] Device Identified: ${data.deviceId} (${data.deviceName})`);
+        broadcastAnalytics();
+      } else if (data.type === 'PING') {
         ws.send(JSON.stringify({ type: 'PONG', timestamp: new Date().toISOString() }));
       } else if (data.type === 'SYNC_QUEUE') {
         const queue = data.queue || [];
@@ -360,8 +392,9 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    activeConnections = Math.max(0, activeConnections - 1);
-    console.log(`[WebSocket] Client Disconnected. Live Active Connections: ${activeConnections}`);
+    const info = connectedClientsMap.get(ws);
+    connectedClientsMap.delete(ws);
+    console.log(`[WebSocket] Client Disconnected (${info ? info.deviceId : 'unknown'}). Live Active Connections: ${connectedClientsMap.size}`);
     broadcastAnalytics();
   });
 });
@@ -397,6 +430,7 @@ app.get('/api/analytics/overview', async (req, res) => {
   const endDate = req.query.endDate || new Date().toISOString().split('T')[0];
   try {
     const data = await bigQueryService.getOverviewMetrics(startDate, endDate);
+    data.activeConnections = activeConnections;
     res.json(data);
   } catch (err) {
     res.json(computeAnalytics());

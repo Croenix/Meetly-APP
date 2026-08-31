@@ -161,6 +161,15 @@ class RealtimeWebSocketService {
       // Start ping heartbeat
       _startHeartbeat();
 
+      // Send client identification for live device tracking in Admin Panel
+      final platformName = kIsWeb ? 'Web Browser' : defaultTargetPlatform.name;
+      sendAction('CLIENT_IDENTIFY', {
+        'deviceId': 'dev_${platformName.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch % 10000}',
+        'deviceName': kIsWeb ? 'Meetly Web Client' : 'RMX3686 (Realme 10 Pro+ 5G)',
+        'platform': platformName,
+        'connectedAt': DateTime.now().toIso8601String(),
+      });
+
       // Flush queued offline items upon connection
       flushOfflineQueue();
 
