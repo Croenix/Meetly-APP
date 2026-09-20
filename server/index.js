@@ -13,6 +13,8 @@ const connectDB = require('./config/db');
 const storeRoutes = require('./routes/storeRoutes');
 const serviceProviderRoutes = require('./routes/serviceProviderRoutes');
 const { errorResponse } = require('./utils/apiResponse');
+const Store = require('./models/Store');
+const ServiceProvider = require('./models/ServiceProvider');
 
 // Initialize Firebase Admin SDK with Resilient Fallbacks
 let db;
@@ -1016,28 +1018,22 @@ app.get('/api/directory', (req, res) => {
 app.post('/api/admin/fetch-directory', async (req, res) => {
   const { option, pincode, category } = req.body;
   const apiKeys = readJsonFile(API_KEYS_FILE, defaultApiKeys);
-  const mmiClientId = apiKeys.mapmyindiaClientId;
-  const mmiClientSecret = apiKeys.mapmyindiaClientSecret;
   const googleApiKey = apiKeys.googleMapsApiKey;
 
-  const hasMapMyIndia = mmiClientId && mmiClientId.trim().length > 0;
   const hasGoogle = googleApiKey && googleApiKey.trim().length > 0;
 
-  if (!hasMapMyIndia && !hasGoogle) {
+  if (!hasGoogle) {
     return res.status(400).json({
       status: 'error',
-      message: 'API Key missing. Please enter and save MapMyIndia (Mappls) or Google Maps API credentials in the "API Settings & Credentials" section.'
+      message: 'Google Maps API Key is missing. Please enter and save your Google Maps Places API key in the "API Settings & Keys" section.'
     });
   }
 
   let currentDirectory = readJsonFile(DIRECTORY_FILE, []);
 
   try {
-    const fetchFunc = hasMapMyIndia 
-      ? (pin, cat) => fetchMapMyIndiaPlacesData(mmiClientId, mmiClientSecret, pin, cat)
-      : (pin, cat) => fetchGooglePlacesData(googleApiKey, pin, cat);
-
-    const sourceName = hasMapMyIndia ? 'MapMyIndia (Mappls API)' : 'Google Places API';
+    const fetchFunc = (pin, cat) => fetchGooglePlacesData(googleApiKey, pin, cat);
+    const sourceName = 'Google Places API';
 
     if (option === 'bulk') {
       let newItems = [];

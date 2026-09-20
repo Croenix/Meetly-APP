@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meetly Master Admin Console — MapMyIndia Credentials & Pincode Engine</title>
+  <title>Meetly Server Admin & Data Management Console</title>
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -22,17 +20,17 @@
       --accent: #ec4899;
       --background: #090d16;
       --surface: rgba(17, 24, 39, 0.75);
-      --surface-card: rgba(30, 41, 59, 0.5);
+      --surface-card: rgba(30, 41, 59, 0.6);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --border: rgba(255, 255, 255, 0.08);
       --border-focus: rgba(99, 102, 241, 0.5);
-      --success: #34d399;
-      --warning: #fbbf24;
-      --error: #f87171;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
       --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
       --shadow-md: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
-      --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 0 25px rgba(99, 102, 241, 0.15);
+      --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
     }
 
     * {
@@ -40,7 +38,7 @@
       margin: 0;
       padding: 0;
       font-family: 'Inter', sans-serif;
-      transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+      transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     }
 
     body {
@@ -56,7 +54,7 @@
       flex-direction: column;
     }
 
-    /* Header Bar */
+    /* Top Navigation Bar */
     header {
       background: rgba(10, 15, 30, 0.85);
       backdrop-filter: blur(20px);
@@ -82,9 +80,9 @@
       color: white;
       font-weight: 900;
       font-size: 22px;
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -97,1316 +95,1189 @@
       letter-spacing: -0.5px;
       background: linear-gradient(135deg, #ffffff 60%, #cbd5e1);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .header-title p {
       font-size: 12px;
       color: var(--text-muted);
+      font-weight: 500;
     }
 
-    .status-panel {
+    .header-status {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      gap: 16px;
     }
 
-    .status-badge {
+    .status-pill {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      padding: 8px 16px;
-      border-radius: 30px;
-      border: 1px solid var(--border);
-      background: rgba(30, 41, 59, 0.4);
-      backdrop-filter: blur(10px);
     }
 
-    .status-indicator {
+    .status-dot {
       width: 8px;
       height: 8px;
-      border-radius: 50%;
-      background-color: var(--text-muted);
-    }
-
-    .status-indicator.online {
       background-color: var(--success);
+      border-radius: 50%;
       box-shadow: 0 0 10px var(--success);
-      animation: pulseGreen 2s infinite;
+      animation: pulse 2s infinite;
     }
 
-    @keyframes pulseGreen {
-      0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
-      70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
     }
 
-    /* Navigation Tabs */
-    .tabs-nav {
-      background: rgba(10, 15, 30, 0.5);
-      backdrop-filter: blur(16px);
+    /* Tab Navigation */
+    .nav-tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.7);
       border-bottom: 1px solid var(--border);
       padding: 0 32px;
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
+      gap: 8px;
     }
 
-    .tab-button {
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
       padding: 16px 20px;
       font-size: 14px;
       font-weight: 600;
-      color: var(--text-muted);
-      border: none;
-      background: none;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
-      position: relative;
-      transition: all 0.3s;
-      white-space: nowrap;
+      gap: 10px;
+      border-bottom: 2px solid transparent;
     }
 
-    .tab-button:hover {
+    .tab-btn:hover {
       color: var(--text-main);
     }
 
-    .tab-button.active {
+    .tab-btn.active {
       color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(99, 102, 241, 0.08);
     }
 
-    .tab-button::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 15%;
-      right: 15%;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      border-radius: 3px 3px 0 0;
-      transform: scaleX(0);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .tab-button.active::after {
-      transform: scaleX(1);
-    }
-
+    /* Main Content Layout */
     main {
       flex: 1;
       padding: 32px;
-      max-width: 1440px;
+      max-width: 1600px;
       width: 100%;
       margin: 0 auto;
     }
 
     .tab-content {
       display: none;
-      animation: fadeIn 0.4s ease-out;
     }
 
     .tab-content.active {
-      display: flex;
-      flex-direction: column;
-      gap: 28px;
+      display: block;
+      animation: fadeIn 0.3s ease-out;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Cards */
-    .card {
-      background: rgba(30, 41, 59, 0.4);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-md);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
+    /* Grid Layouts & Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 20px;
-      position: relative;
+      margin-bottom: 32px;
     }
 
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: #ffffff;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 14px;
+    .metric-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary);
+    }
+
+    .metric-card.cyan::before { background: var(--secondary); }
+    .metric-card.pink::before { background: var(--accent); }
+    .metric-card.green::before { background: var(--success); }
+    .metric-card.amber::before { background: var(--warning); }
+
+    .metric-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Panels & Tables */
+    .panel {
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 32px;
+    }
+
+    .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 24px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-
-    @media (max-width: 1024px) {
-      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-    }
-
-    /* Form Controls */
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-    }
-
-    input[type="text"], input[type="password"], select {
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 500;
-      background: rgba(15, 23, 42, 0.6);
-      color: var(--text-main);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      outline: none;
-    }
-
-    input[type="text"]:focus, input[type="password"]:focus, select:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px var(--primary-glow);
-    }
-
-    /* Buttons */
-    .btn {
-      padding: 12px 24px;
-      font-size: 13px;
-      font-weight: 600;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: white;
-      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--text-main);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    /* Option Cards */
-    .option-card {
-      background: rgba(15, 23, 42, 0.5);
-      border: 1.5px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: relative;
-    }
-
-    .option-card.selected {
-      border-color: var(--primary);
-      background: rgba(99, 102, 241, 0.1);
-    }
-
-    .option-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .option-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: rgba(99, 102, 241, 0.15);
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .panel-title {
       font-size: 18px;
-    }
-
-    /* Tables */
-    .table-container {
-      overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-
-    th {
-      background: rgba(15, 23, 42, 0.85);
-      color: var(--text-muted);
       font-weight: 700;
-      text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 0.8px;
-      padding: 14px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-
-    td {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-main);
-      vertical-align: top;
-    }
-
-    tr:hover {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      background: rgba(99, 102, 241, 0.15);
-      color: var(--primary);
-    }
-
-    .badge-secondary {
-      background: rgba(6, 182, 212, 0.15);
-      color: var(--secondary);
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      bottom: 32px;
-      right: 32px;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--primary);
-      color: white;
-      padding: 14px 24px;
-      border-radius: 14px;
-      font-size: 13px;
-      font-weight: 600;
-      box-shadow: var(--shadow-lg);
-      transform: translateY(100px);
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      z-index: 2000;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
+    .panel-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .search-input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      width: 260px;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 14px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-danger {
+      background: var(--error);
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    /* Table Styling */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-info { background: rgba(6, 182, 212, 0.15); color: var(--secondary); }
+
+    .img-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #1e293b;
+    }
+
+    /* Form & Modal Dialogs */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 600px;
+      padding: 32px;
+      box-shadow: var(--shadow-lg);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Import Cards Grid */
+    .import-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .import-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .import-card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+    }
+
+    .import-card-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .import-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .import-card-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .import-card-footer {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
   </style>
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Top Navigation Bar -->
   <header>
     <div class="header-brand">
       <div class="logo-badge">M</div>
       <div class="header-title">
-        <h1>Meetly Master Admin Console</h1>
-        <p>Real-Time Operations & MapMyIndia (Mappls) Pincode Engine</p>
+        <h1>Meetly Server Console</h1>
+        <p>MongoDB Atlas & Real-time Live Connected Applications</p>
       </div>
     </div>
-    <div class="status-panel">
-      <div class="status-badge">
-        <div class="status-indicator online"></div>
-        Node.js Server: Online
+    <div class="header-status">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span id="wsStatus">WebSocket Live Online</span>
       </div>
-      <div class="status-badge" id="api-key-status-badge">
-        <i class="fa-solid fa-map-location-dot" style="color: var(--secondary);"></i>
-        MapMyIndia API: <span id="header-api-status" style="color: var(--warning); font-weight: bold; margin-left: 4px;">Checking...</span>
-      </div>
-      <div class="status-badge" style="border-color: rgba(52, 211, 153, 0.4);">
-        <div class="status-indicator online"></div>
-        Live Devices: <span id="header-connected-count" style="color: var(--success); font-weight: bold; margin-left: 4px;">0</span>
+      <div style="font-size: 13px; color: var(--text-muted);" id="serverAddressInfo">
+        Server: <strong style="color: white;" id="dynamicServerIp">http://localhost:5000</strong>
       </div>
     </div>
   </header>
 
   <!-- Navigation Tabs -->
-  <nav class="tabs-nav">
-    <button class="tab-button active" onclick="switchTab('analytics-tab', this)">
-      <i class="fa-solid fa-chart-line"></i> Analytics & Live Telemetry
-    </button>
-    <button class="tab-button" onclick="switchTab('api-keys-tab', this)">
-      <i class="fa-solid fa-key"></i> API Settings & Credentials
-    </button>
-    <button class="tab-button" onclick="switchTab('pincode-tab', this)">
-      <i class="fa-solid fa-map-location-dot"></i> MapMyIndia (Mappls) Engine
-    </button>
-    <button class="tab-button" onclick="switchTab('banners-tab', this)">
-      <i class="fa-solid fa-rectangle-ad"></i> Dynamic Banners
-    </button>
-    <button class="tab-button" onclick="switchTab('categories-tab', this)">
-      <i class="fa-solid fa-list-check"></i> Categories Catalog
-    </button>
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-line"></i> Dashboard & Telemetry</button>
+    <button class="tab-btn" onclick="switchTab('stores')"><i class="fa-solid fa-store"></i> Stores (Shops) Manager</button>
+    <button class="tab-btn" onclick="switchTab('providers')"><i class="fa-solid fa-user-tie"></i> Service Providers Manager</button>
+    <button class="tab-btn" onclick="switchTab('import')"><i class="fa-solid fa-cloud-arrow-down"></i> Google Place Search & Import</button>
+    <button class="tab-btn" onclick="switchTab('settings')"><i class="fa-solid fa-key"></i> API Settings & Keys</button>
   </nav>
 
+  <!-- Main Content Area -->
   <main>
-
-    <!-- TAB 1: ANALYTICS & LIVE TELEMETRY -->
-    <div id="analytics-tab" class="tab-content active">
-      <div class="grid-4">
-        <div class="card" style="padding: 18px; border-color: rgba(52, 211, 153, 0.3);">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Live Connected Devices</div>
-          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
-            <span id="live-apps-count" style="font-size: 28px; font-weight: 800; color: var(--success);">0</span>
-            <span style="font-size: 12px; color: var(--text-muted);">verified active sessions</span>
-          </div>
-          <div style="font-size: 11px; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-            <div class="status-indicator online" style="width: 6px; height: 6px;"></div>
-            <span>WebSocket Live Stream</span>
-          </div>
+    
+    <!-- TAB 1: DASHBOARD & LIVE TELEMETRY -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="metrics-grid">
+        <div class="metric-card green">
+          <div class="metric-title">Live Connected Clients</div>
+          <div class="metric-value" id="statConnectedApps">0</div>
+          <div class="metric-sub">Active WebSocket Sessions</div>
         </div>
-
-        <div class="card" style="padding: 18px;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Active Users (DAU / MAU)</div>
-          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
-            <span id="dau-value" style="font-size: 28px; font-weight: 800; color: var(--primary);">0</span>
-            <span style="color: var(--text-muted); font-size: 14px;">/</span>
-            <span id="mau-value" style="font-size: 18px; font-weight: 600;">0</span>
-          </div>
-          <div style="font-size: 11px; color: var(--success); font-weight: 500; margin-top: 4px;">
-            ↑ 14.2% active user growth
-          </div>
+        <div class="metric-card cyan">
+          <div class="metric-title">Total Registered Users</div>
+          <div class="metric-value" id="statTotalUsers">0</div>
+          <div class="metric-sub" id="statCustomerCount">0 Customers</div>
         </div>
-
-        <div class="card" style="padding: 18px;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">MapMyIndia Directory Records</div>
-          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
-            <span id="directory-count-card" style="font-size: 28px; font-weight: 800; color: var(--secondary);">0</span>
-            <span style="font-size: 12px; color: var(--text-muted);">verified eLoc records</span>
-          </div>
-          <div style="font-size: 11px; color: var(--secondary); font-weight: 500; margin-top: 4px;">
-            Kerala Coverage Active
-          </div>
+        <div class="metric-card pink">
+          <div class="metric-title">Service Providers</div>
+          <div class="metric-value" id="statTotalProviders">0</div>
+          <div class="metric-sub">Verified Pros & Specialists</div>
         </div>
-
-        <div class="card" style="padding: 18px;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Bookings Conversion</div>
-          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 6px;">
-            <span id="conversion-value" style="font-size: 28px; font-weight: 800; color: var(--accent);">0%</span>
-          </div>
-          <div style="font-size: 11px; color: var(--success); font-weight: 500; margin-top: 4px;">
-            ↑ 3.8% completed jobs
-          </div>
+        <div class="metric-card amber">
+          <div class="metric-title">Stores / Business Listings</div>
+          <div class="metric-value" id="statTotalStores">0</div>
+          <div class="metric-sub">MongoDB Atlas Stores</div>
         </div>
       </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-title">
-            <span>Daily Active Users (DAU) Trend</span>
-            <button class="btn btn-secondary" onclick="loadAnalytics()" style="padding: 6px 12px; font-size: 11px;">Refresh</button>
-          </div>
-          <div style="position: relative; height: 260px; width: 100%;">
-            <canvas id="dauChart"></canvas>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Category Engagement Distribution</div>
-          <div style="position: relative; height: 260px; width: 100%;">
-            <canvas id="categoryChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="border-color: rgba(52, 211, 153, 0.3);">
-        <div class="card-title">
-          <span><i class="fa-solid fa-plug-circle-check" style="color: var(--success);"></i> Live Verified Connected Devices</span>
-          <span class="badge" id="connected-devices-badge" style="background: rgba(52, 211, 153, 0.15); color: var(--success);">0 Active</span>
+      <!-- Live Connected Applications / Devices Table -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-plug" style="color: var(--success);"></i> Live Connected Applications & Devices</div>
+          <button class="btn btn-secondary btn-sm" onclick="fetchTelemetry()"><i class="fa-solid fa-arrows-rotate"></i> Refresh Telemetry</button>
         </div>
         <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>DEVICE ID</th>
-                <th>DEVICE NAME / MODEL</th>
-                <th>PLATFORM</th>
-                <th>IP ADDRESS</th>
-                <th>CONNECTED AT</th>
-                <th>STATUS</th>
+                <th>Session Key</th>
+                <th>User ID</th>
+                <th>Device ID</th>
+                <th>IP Address</th>
+                <th>Connected At</th>
+                <th>Status</th>
               </tr>
             </thead>
-            <tbody id="connected-devices-table-body">
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No live devices connected. Launch the Flutter app to view live device session streams.</td></tr>
+            <tbody id="connectedDevicesBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Waiting for active mobile app connection...</td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-
-    <!-- TAB 2: API SETTINGS & CREDENTIALS MANAGEMENT -->
-    <div id="api-keys-tab" class="tab-content">
-      <div class="card">
-        <div class="card-title">
-          <span><i class="fa-solid fa-key" style="color: var(--warning);"></i> API Credentials Management Module</span>
-          <span class="badge" id="api-key-active-status" style="background: rgba(251, 191, 36, 0.15); color: var(--warning);">Not Configured</span>
-        </div>
-
-        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-          Configure your external API credentials below to power the live MapMyIndia (Mappls API) pincode data extraction engine. ZERO dummy or fake data is hardcoded. All places are retrieved dynamically via verified MapMyIndia REST & OAuth endpoints.
-        </p>
-
-        <!-- MapMyIndia (Mappls API) Group -->
-        <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 16px; border: 1.5px solid rgba(6, 182, 212, 0.3); display: flex; flex-direction: column; gap: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <i class="fa-solid fa-map-location-dot" style="font-size: 20px; color: var(--secondary);"></i>
-              <div>
-                <h4 style="font-size: 14px; font-weight: 700;">MapMyIndia (Mappls API) Credentials</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Used for Mappls Places TextSearch, Geocoding, eLoc Resolution & Verified Kerala Pincode Aggregation</p>
-              </div>
-            </div>
-            <span class="badge" id="mmi-key-status" style="background: rgba(248, 113, 113, 0.15); color: var(--error);">Credentials Missing</span>
-          </div>
-
-          <div class="grid-2">
-            <div class="form-group">
-              <label for="input-mmi-client-id">MAPMYINDIA CLIENT ID / REST API KEY</label>
-              <input type="password" id="input-mmi-client-id" placeholder="273c8d..." style="letter-spacing: 1px; font-family: monospace;">
-            </div>
-            <div class="form-group">
-              <label for="input-mmi-client-secret">MAPMYINDIA CLIENT SECRET (FOR OAUTH 2.0)</label>
-              <input type="password" id="input-mmi-client-secret" placeholder="lrn0... (Optional if using direct API Key)" style="letter-spacing: 1px; font-family: monospace;">
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 12px; margin-top: 4px;">
-            <button class="btn btn-secondary" onclick="testApiKey('mapmyindia')" id="test-mmi-btn">
-              <i class="fa-solid fa-vial"></i> Test API Connection
-            </button>
-            <button class="btn btn-primary" onclick="saveApiKeys()">
-              <i class="fa-solid fa-floppy-disk"></i> Save Credentials
-            </button>
+    <!-- TAB 2: STORES (SHOPS) MANAGER -->
+    <div id="tab-stores" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-store" style="color: var(--secondary);"></i> Store & Business Directory (MongoDB Atlas)</div>
+          <div class="panel-actions">
+            <input type="text" id="storeSearchInput" class="search-input" placeholder="Search stores..." onkeyup="filterStoresTable()">
+            <button class="btn" onclick="openAddStoreModal()"><i class="fa-solid fa-plus"></i> Add New Store</button>
           </div>
         </div>
-
-        <!-- Google Maps API Group (Secondary Fallback) -->
-        <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; margin-top: 6px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <i class="fa-brands fa-google" style="font-size: 18px; color: #4285F4;"></i>
-              <div>
-                <h4 style="font-size: 14px; font-weight: 700;">Google Maps / Places API Key (Secondary Fallback)</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Optional secondary Places API Key fallback</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="input-gmaps-key">GOOGLE MAPS API KEY</label>
-            <input type="password" id="input-gmaps-key" placeholder="AIzaSy..." style="letter-spacing: 1px; font-family: monospace;">
-          </div>
-
-          <div style="display: flex; gap: 12px;">
-            <button class="btn btn-secondary" onclick="testApiKey('google')" id="test-gmaps-btn">
-              <i class="fa-solid fa-vial"></i> Test Connection
-            </button>
-            <button class="btn btn-primary" onclick="saveApiKeys()">
-              <i class="fa-solid fa-floppy-disk"></i> Save Credentials
-            </button>
-          </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Store Name</th>
+                <th>Category</th>
+                <th>Pincode</th>
+                <th>City & Address</th>
+                <th>Phone</th>
+                <th>Rating</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="storesTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted);">Loading stores database...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
-
-    <!-- TAB 3: MAPMYINDIA (MAPPLS) PINCODE ENGINE -->
-    <div id="pincode-tab" class="tab-content">
-      <div class="card">
-        <div class="card-title">
-          <span><i class="fa-solid fa-map-location-dot" style="color: var(--secondary);"></i> MapMyIndia (Mappls) Pincode Data Aggregation Engine</span>
-          <span class="badge" id="directory-total-badge">0 Total Real Listings</span>
-        </div>
-
-        <div id="api-key-alert-box" style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning); font-size: 18px;"></i>
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: #ffffff;">MapMyIndia API Status: <span id="engine-key-status" style="color: var(--warning);">Checking...</span></div>
-              <div style="font-size: 11px; color: var(--text-muted);">Ensure valid MapMyIndia API credentials are saved in the API Settings tab before executing fetches.</div>
-            </div>
-          </div>
-          <button class="btn btn-secondary" onclick="switchTab('api-keys-tab', document.querySelectorAll('.tab-button')[1])" style="padding: 6px 14px; font-size: 12px;">
-            Configure Key
-          </button>
-        </div>
-
-        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-          Select one of the 3 data fetching options below to execute real MapMyIndia (Mappls API) requests. Returned places are strictly validated against postal code bounds and assigned unique eLoc pin references.
-        </p>
-
-        <!-- 3 Aggregation Options Grid -->
-        <div class="grid-3">
-          <div class="option-card selected" id="opt1-card" onclick="selectAggOption('bulk')">
-            <div class="option-header">
-              <div class="option-icon"><i class="fa-solid fa-network-wired"></i></div>
-              <div>
-                <h4 style="font-size: 14px; font-weight: 700;">Option 1: Automated Bulk Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">MapMyIndia Kerala Pincode Loop</p>
-              </div>
-            </div>
-            <p style="font-size: 12px; color: var(--text-muted);">
-              Sequentially queries MapMyIndia API using valid Kerala pincodes (682001, 682002, 682020, 673001, 695001, etc.).
-            </p>
-          </div>
-
-          <div class="option-card" id="opt2-card" onclick="selectAggOption('single')">
-            <div class="option-header">
-              <div class="option-icon" style="color: var(--secondary); background: rgba(6, 182, 212, 0.15);"><i class="fa-solid fa-map-pin"></i></div>
-              <div>
-                <h4 style="font-size: 14px; font-weight: 700;">Option 2: Individual Pincode Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Target Specific Pincode</p>
-              </div>
-            </div>
-            <p style="font-size: 12px; color: var(--text-muted);">
-              Admin inputs a specific pincode, server fetches real places strictly matching that pincode via MapMyIndia Search API.
-            </p>
-          </div>
-
-          <div class="option-card" id="opt3-card" onclick="selectAggOption('category')">
-            <div class="option-header">
-              <div class="option-icon" style="color: var(--accent); background: rgba(236, 72, 153, 0.15);"><i class="fa-solid fa-filter"></i></div>
-              <div>
-                <h4 style="font-size: 14px; font-weight: 700;">Option 3: Category Pincode Fetch</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">Filtered Service Category</p>
-              </div>
-            </div>
-            <p style="font-size: 12px; color: var(--text-muted);">
-              Queries MapMyIndia API for specific categories (Electrician, Mechanic, School, Plumber, Hospital, Local Shop) per pincode.
-            </p>
+    <!-- TAB 3: SERVICE PROVIDERS MANAGER -->
+    <div id="tab-providers" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-user-tie" style="color: var(--accent);"></i> Service Providers Directory (MongoDB Atlas)</div>
+          <div class="panel-actions">
+            <input type="text" id="providerSearchInput" class="search-input" placeholder="Search providers..." onkeyup="filterProvidersTable()">
+            <button class="btn" onclick="openAddProviderModal()"><i class="fa-solid fa-plus"></i> Add New Service Provider</button>
           </div>
         </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Business Name</th>
+                <th>Profession</th>
+                <th>Category</th>
+                <th>Starting Price</th>
+                <th>Location</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="providersTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted);">Loading providers database...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-        <!-- Input Parameters Form -->
-        <div id="agg-form-container" style="display: flex; gap: 16px; align-items: flex-end; margin-top: 8px;">
-          <div class="form-group" id="pincode-input-group" style="flex: 1; display: none;">
-            <label for="agg-pincode">TARGET PINCODE</label>
-            <input type="text" id="agg-pincode" placeholder="e.g. 682020" value="682020">
+    <!-- TAB 4: GOOGLE PLACES SEARCH & 1-CLICK IMPORT -->
+    <div id="tab-import" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-magnifying-glass-location" style="color: var(--primary);"></i> Google Places Search & Import</div>
+        </div>
+        <div class="form-row" style="margin-bottom: 20px;">
+          <div class="form-group">
+            <label>Pincode or City Location</label>
+            <input type="text" id="importPincodeInput" class="form-control" placeholder="e.g. 682001 or Kochi" value="682001">
           </div>
-
-          <div class="form-group" id="category-input-group" style="flex: 1; display: none;">
-            <label for="agg-category">SERVICE CATEGORY</label>
-            <select id="agg-category">
-              <option value="Electricians">Electricians</option>
-              <option value="Plumbers">Plumbers</option>
-              <option value="Mechanics">Mechanics</option>
-              <option value="Schools">Schools</option>
-              <option value="Hospitals">Hospitals</option>
-              <option value="Cleaners">Cleaners</option>
-              <option value="Painters">Painters</option>
-              <option value="Carpenters">Carpenters</option>
-              <option value="Tutors">Tutors</option>
+          <div class="form-group">
+            <label>Business Category Filter</label>
+            <select id="importCategorySelect" class="form-control">
+              <option value="Electrical">Electrical & Rewiring</option>
+              <option value="Plumbing">Plumbing Services</option>
+              <option value="Cleaning">House Cleaning</option>
+              <option value="Appliance">Appliance Repair</option>
+              <option value="General">General Stores</option>
             </select>
           </div>
+        </div>
+        <button class="btn" onclick="executePlaceFetch()"><i class="fa-solid fa-cloud-arrow-down"></i> Search Google Places API</button>
 
-          <button class="btn btn-primary" onclick="triggerDirectoryFetch()" id="agg-trigger-btn">
-            <i class="fa-solid fa-map-location-dot"></i> Fetch Live MapMyIndia Places
-          </button>
-        </div>
-      </div>
-
-      <!-- Real Business Directory Data Table -->
-      <div class="card">
-        <div class="card-title">
-          <span>Persisted MapMyIndia Business Directory Records (eLoc Verified)</span>
-          <div style="display: flex; gap: 10px;">
-            <input type="text" id="dir-search-input" placeholder="Search business, address, or eLoc..." oninput="filterDirectoryTable()" style="width: 240px; padding: 6px 12px; font-size: 12px;">
-            <button class="btn btn-secondary" onclick="loadDirectory()" style="padding: 6px 14px; font-size: 12px;">Refresh</button>
-          </div>
-        </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>BUSINESS NAME & eLOC CODE</th>
-                <th>CATEGORIES</th>
-                <th>CONTACT & ADDRESS</th>
-                <th>COORDINATES & MAPMYINDIA MAP</th>
-                <th>RATINGS & REVIEWS</th>
-                <th>HOURS & AVAILABILITY</th>
-              </tr>
-            </thead>
-            <tbody id="directory-table-body">
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No directory records. Configure MapMyIndia credentials in "API Settings" and click "Fetch Live MapMyIndia Places".</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <div id="importStatusMessage" style="margin-top: 16px; font-size: 14px;"></div>
+        <div class="import-grid" id="importResultsGrid"></div>
       </div>
     </div>
 
-
-    <!-- TAB 4: DYNAMIC BANNERS -->
-    <div id="banners-tab" class="tab-content">
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-title">
-            <span>Banner Configurations</span>
-            <button class="btn btn-secondary" onclick="resetBannerForm()" style="padding: 6px 12px; font-size: 11px;">+ New Banner</button>
-          </div>
-
-          <input type="hidden" id="banner-id" value="">
-
+    <!-- TAB 5: API SETTINGS & CREDENTIALS -->
+    <div id="tab-settings" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-key" style="color: var(--warning);"></i> Google API Key Settings</div>
+        </div>
+        <form id="apiKeysForm" onsubmit="saveApiKeys(event)">
           <div class="form-group">
-            <label for="promo-subtitle">PROMO SUBTITLE</label>
-            <input type="text" id="promo-subtitle" placeholder="e.g. Save 30% Today!">
+            <label>Google Maps Places API Key *</label>
+            <input type="password" id="googleMapsApiKey" class="form-control" placeholder="AIzaSy..." required>
+            <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">Used for querying real-world places, photos, coordinates, and reviews via Google Places API.</small>
           </div>
-
-          <div class="form-group">
-            <label for="promo-title">PROMO TITLE</label>
-            <input type="text" id="promo-title" placeholder="e.g. Professional Help for Your Home">
-          </div>
-
-          <div class="form-group">
-            <label for="promo-discount">DISCOUNT LABEL</label>
-            <input type="text" id="promo-discount" placeholder="e.g. 30%">
-          </div>
-
-          <div class="form-group">
-            <label for="custom-image-url">IMAGE URL</label>
-            <input type="text" id="custom-image-url" placeholder="https://images.unsplash.com/..." oninput="updateLivePreview()">
-          </div>
-
-          <button class="btn btn-primary" onclick="saveBanner()" style="margin-top: 10px;">
-            <i class="fa-solid fa-floppy-disk"></i> Save & Sync to Mobile Clients
-          </button>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Live Preview (Mobile Carousel Slide)</div>
-          <div style="width: 100%; height: 150px; border-radius: 18px; background: linear-gradient(135deg, #1e1b4b, #311042); padding: 20px; display: flex; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-            <div style="flex: 6; display: flex; flex-direction: column; justify-content: center; z-index: 2;">
-              <div id="prev-subtitle" style="color: #818cf8; font-size: 11px; font-weight: 800; text-transform: uppercase;">Save 30% Today!</div>
-              <div id="prev-title" style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 6px 0 10px 0;">Exclusive discounts<br>on home services</div>
-              <div style="background: white; color: #0f172a; padding: 6px 16px; font-size: 10px; font-weight: 700; border-radius: 20px; width: fit-content;">Book a Service</div>
-            </div>
-            <div style="flex: 4; display: flex; align-items: center; justify-content: flex-end; z-index: 2;">
-              <img id="prev-img" src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300" style="max-height: 100px; border-radius: 10px;" alt="Illustration">
-            </div>
-          </div>
-          <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
-            Updates stream instantly via WebSocket to all connected mobile clients without app restart.
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Active Promotion Banners</div>
-        <div id="banners-list-container" style="display: flex; flex-direction: column; gap: 12px;">
-          <!-- Dynamically populated -->
-        </div>
-      </div>
-    </div>
-
-
-    <!-- TAB 5: CATEGORIES CATALOG -->
-    <div id="categories-tab" class="tab-content">
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-title">Manage Service Categories</div>
-          <div class="form-group" style="flex-direction: row; gap: 12px; align-items: flex-end;">
-            <div style="flex: 1;">
-              <label for="new-category-name">CATEGORY NAME</label>
-              <input type="text" id="new-category-name" placeholder="e.g. Landscaping">
-            </div>
-            <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
-          </div>
-          <div id="categories-list-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Category Catalog Info</div>
-          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
-            Managing service categories dynamically updates customer app home screens, search screen chips, and category filtering lists across all devices.
-          </p>
-        </div>
+          <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Google API Key</button>
+        </form>
       </div>
     </div>
 
   </main>
 
-  <!-- Toast -->
-  <div class="toast" id="toast-message">
-    <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
-    <span id="toast-text">Settings synced!</span>
+  <!-- MODAL: ADD/EDIT STORE -->
+  <div class="modal-overlay" id="storeModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="storeModalTitle">Add New Store</div>
+        <button class="close-btn" onclick="closeStoreModal()">&times;</button>
+      </div>
+      <form id="storeForm" onsubmit="submitStoreForm(event)">
+        <input type="hidden" id="storeEditId">
+        <div class="form-group">
+          <label>Store Name *</label>
+          <input type="text" id="storeName" class="form-control" required placeholder="e.g. Kerala Expert Electricians">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category *</label>
+            <input type="text" id="storeCategory" class="form-control" required placeholder="e.g. Electrical">
+          </div>
+          <div class="form-group">
+            <label>Pincode *</label>
+            <input type="text" id="storePincode" class="form-control" required placeholder="682001">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Address *</label>
+          <input type="text" id="storeAddress" class="form-control" required placeholder="MG Road, Kochi">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="text" id="storePhone" class="form-control" required placeholder="+91 9847000000">
+          </div>
+          <div class="form-group">
+            <label>City *</label>
+            <input type="text" id="storeCity" class="form-control" required placeholder="Kochi">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Rating (0.0 - 5.0)</label>
+            <input type="number" step="0.1" id="storeRating" class="form-control" value="4.5">
+          </div>
+          <div class="form-group">
+            <label>Image URL</label>
+            <input type="text" id="storeImageUrl" class="form-control" placeholder="https://images.unsplash.com/...">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeStoreModal()">Cancel</button>
+          <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Store</button>
+        </div>
+      </form>
+    </div>
   </div>
 
+  <!-- MODAL: ADD/EDIT SERVICE PROVIDER -->
+  <div class="modal-overlay" id="providerModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="providerModalTitle">Add New Service Provider</div>
+        <button class="close-btn" onclick="closeProviderModal()">&times;</button>
+      </div>
+      <form id="providerForm" onsubmit="submitProviderForm(event)">
+        <input type="hidden" id="providerEditId">
+        <div class="form-group">
+          <label>Business / Provider Name *</label>
+          <input type="text" id="providerBusinessName" class="form-control" required placeholder="e.g. Rajesh Electrical Solutions">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Profession *</label>
+            <input type="text" id="providerProfession" class="form-control" required placeholder="e.g. Master Electrician">
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <input type="text" id="providerCategory" class="form-control" required placeholder="Electrical">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Starting Price (₹) *</label>
+            <input type="number" id="providerStartingPrice" class="form-control" required placeholder="299">
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="text" id="providerPhone" class="form-control" required placeholder="+91 9847012345">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Location *</label>
+            <input type="text" id="providerLocation" class="form-control" required placeholder="Kochi, Kerala">
+          </div>
+          <div class="form-group">
+            <label>Verification Status</label>
+            <select id="providerVerificationStatus" class="form-control">
+              <option value="verified">Verified</option>
+              <option value="under_review">Under Review</option>
+              <option value="not_submitted">Not Submitted</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Bio / Description</label>
+          <textarea id="providerBio" class="form-control" rows="3" placeholder="Specialized in residential wiring and switchboard repairs..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeProviderModal()">Cancel</button>
+          <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Service Provider</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Application Logic -->
   <script>
-    let currentAggOption = 'bulk';
-    let directoryList = [];
-    let banners = [];
-    let categories = [];
-    let savedApiKeys = { mapmyindiaClientId: '', mapmyindiaClientSecret: '', googleMapsApiKey: '', customScrapingApiKey: '' };
+    let storesData = [];
+    let providersData = [];
+    let ws = null;
 
-    function switchTab(tabId, button) {
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-      
-      document.getElementById(tabId).classList.add('active');
-      button.classList.add('active');
+    // Initialize Page
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('dynamicServerIp').innerText = window.location.origin;
+      connectWebSocket();
+      fetchTelemetry();
+      loadStores();
+      loadProviders();
+      loadApiKeys();
+    });
 
-      if (tabId === 'analytics-tab') loadAnalytics();
-      if (tabId === 'pincode-tab') loadDirectory();
-      if (tabId === 'api-keys-tab') loadApiKeys();
+    // Tab Navigation Switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+
+      if (tabId === 'stores') loadStores();
+      if (tabId === 'providers') loadProviders();
     }
 
-    async function loadApiKeys() {
-      try {
-        const res = await fetch('/api/admin/api-keys');
-        if (res.ok) {
-          savedApiKeys = await res.json();
-          document.getElementById('input-mmi-client-id').value = savedApiKeys.mapmyindiaClientId || '';
-          document.getElementById('input-mmi-client-secret').value = savedApiKeys.mapmyindiaClientSecret || '';
-          document.getElementById('input-gmaps-key').value = savedApiKeys.googleMapsApiKey || '';
-          updateApiKeyBadges();
+    // WebSocket Connection Handler
+    function connectWebSocket() {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('wsStatus').innerText = 'WebSocket Live Online';
+        document.getElementById('wsStatus').style.color = 'var(--success)';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'ADMIN_TELEMETRY') {
+            updateDashboardTelemetry(data.data);
+          }
+        } catch (e) {
+          console.error("WS Parse error", e);
         }
-      } catch (_) {}
+      };
+
+      ws.onclose = () => {
+        document.getElementById('wsStatus').innerText = 'Reconnecting...';
+        document.getElementById('wsStatus').style.color = 'var(--warning)';
+        setTimeout(connectWebSocket, 3000);
+      };
     }
 
-    function updateApiKeyBadges() {
-      const hasMMI = savedApiKeys.mapmyindiaClientId && savedApiKeys.mapmyindiaClientId.trim().length > 3;
-      const hasGoogle = savedApiKeys.googleMapsApiKey && savedApiKeys.googleMapsApiKey.trim().length > 5;
-      const hasKey = hasMMI || hasGoogle;
-
-      const statusText = hasMMI ? 'MapMyIndia Active' : (hasGoogle ? 'Google Active' : 'Key Missing');
-      const statusColor = hasKey ? 'var(--success)' : 'var(--warning)';
-      
-      document.getElementById('header-api-status').innerText = hasMMI ? 'MapMyIndia' : (hasGoogle ? 'Google' : 'Missing');
-      document.getElementById('header-api-status').style.color = statusColor;
-
-      const activeBadge = document.getElementById('api-key-active-status');
-      if (activeBadge) {
-        activeBadge.innerText = statusText;
-        activeBadge.style.backgroundColor = hasKey ? 'rgba(52, 211, 153, 0.15)' : 'rgba(251, 191, 36, 0.15)';
-        activeBadge.style.color = statusColor;
-      }
-
-      const mmiBadge = document.getElementById('mmi-key-status');
-      if (mmiBadge) {
-        mmiBadge.innerText = hasMMI ? 'Credentials Configured' : 'Credentials Missing';
-        mmiBadge.style.backgroundColor = hasMMI ? 'rgba(52, 211, 153, 0.15)' : 'rgba(248, 113, 113, 0.15)';
-        mmiBadge.style.color = hasMMI ? 'var(--success)' : 'var(--error)';
-      }
-
-      const engineStatus = document.getElementById('engine-key-status');
-      if (engineStatus) {
-        engineStatus.innerText = hasMMI ? 'MapMyIndia Active' : (hasGoogle ? 'Google Fallback Active' : 'Missing (Configure Key in API Settings)');
-        engineStatus.style.color = statusColor;
-      }
-    }
-
-    async function saveApiKeys() {
-      const mmiId = document.getElementById('input-mmi-client-id').value;
-      const mmiSecret = document.getElementById('input-mmi-client-secret').value;
-      const gmaps = document.getElementById('input-gmaps-key').value;
-
+    // Fetch Dashboard Telemetry via REST
+    async function fetchTelemetry() {
       try {
-        const res = await fetch('/api/admin/api-keys', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            mapmyindiaClientId: mmiId, 
-            mapmyindiaClientSecret: mmiSecret,
-            googleMapsApiKey: gmaps 
-          })
-        });
+        const res = await fetch('/api/admin/telemetry');
         if (res.ok) {
           const data = await res.json();
-          savedApiKeys = data.keys;
-          updateApiKeyBadges();
-          showToast("API Credentials saved successfully!");
-        }
-      } catch (_) {
-        showToast("Error saving API credentials.");
-      }
-    }
-
-    async function testApiKey(keyType) {
-      let payload = { keyType };
-      if (keyType === 'mapmyindia') {
-        payload.clientId = document.getElementById('input-mmi-client-id').value;
-        payload.clientSecret = document.getElementById('input-mmi-client-secret').value;
-        if (!payload.clientId || !payload.clientId.trim()) return alert("Please enter MapMyIndia Client ID / API Key to test.");
-      } else {
-        payload.apiKey = document.getElementById('input-gmaps-key').value;
-        if (!payload.apiKey || !payload.apiKey.trim()) return alert("Please enter Google Maps API Key to test.");
-      }
-
-      const btn = keyType === 'mapmyindia' ? document.getElementById('test-mmi-btn') : document.getElementById('test-gmaps-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing Connection...';
-
-      try {
-        const res = await fetch('/api/admin/test-api-key', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert(`✅ Connection Verified: ${data.message}`);
-        } else {
-          alert(`❌ Connection Failed: ${data.message || 'Invalid API Key / Credentials'}`);
+          updateDashboardTelemetry(data);
         }
       } catch (err) {
-        alert(`❌ Network error while testing API Key: ${err.message}`);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-vial"></i> Test API Connection';
+        console.warn("Failed to fetch telemetry:", err);
       }
     }
 
-    function selectAggOption(option) {
-      currentAggOption = option;
-      document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-      
-      const pinInputGroup = document.getElementById('pincode-input-group');
-      const catInputGroup = document.getElementById('category-input-group');
+    function updateDashboardTelemetry(data) {
+      if (!data) return;
+      document.getElementById('statConnectedApps').innerText = data.activeConnections || data.totalConnectedDevices || 0;
+      document.getElementById('statTotalUsers').innerText = data.totalUsers || 0;
+      document.getElementById('statCustomerCount').innerText = `${data.customerCount || 0} Customers`;
+      document.getElementById('statTotalProviders').innerText = data.providerCount || 0;
 
-      if (option === 'bulk') {
-        document.getElementById('opt1-card').classList.add('selected');
-        pinInputGroup.style.display = 'none';
-        catInputGroup.style.display = 'none';
-      } else if (option === 'single') {
-        document.getElementById('opt2-card').classList.add('selected');
-        pinInputGroup.style.display = 'flex';
-        catInputGroup.style.display = 'none';
-      } else if (option === 'category') {
-        document.getElementById('opt3-card').classList.add('selected');
-        pinInputGroup.style.display = 'flex';
-        catInputGroup.style.display = 'flex';
+      // Render connected devices table
+      const tbody = document.getElementById('connectedDevicesBody');
+      if (data.connectedDevices && data.connectedDevices.length > 0) {
+        tbody.innerHTML = data.connectedDevices.map(dev => `
+          <tr>
+            <td><code style="color: var(--secondary);">${dev.sessionKey || 'sess_active'}</code></td>
+            <td>${dev.userId || 'Guest App'}</td>
+            <td>${dev.deviceId || 'Mobile Device'}</td>
+            <td>${dev.clientIp || '127.0.0.1'}</td>
+            <td>${dev.connectedAt ? new Date(dev.connectedAt).toLocaleTimeString() : 'Just now'}</td>
+            <td><span class="badge badge-success">Connected</span></td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No active mobile apps connected right now</td></tr>`;
       }
     }
 
-    async function triggerDirectoryFetch() {
-      const hasMMI = savedApiKeys.mapmyindiaClientId && savedApiKeys.mapmyindiaClientId.trim().length > 3;
-      const hasGoogle = savedApiKeys.googleMapsApiKey && savedApiKeys.googleMapsApiKey.trim().length > 5;
+    // STORES MANAGER CRUD
+    async function loadStores() {
+      try {
+        const res = await fetch('/api/v1/stores');
+        const json = await res.json();
+        storesData = json.data || [];
+        document.getElementById('statTotalStores').innerText = storesData.length;
+        renderStoresTable(storesData);
+      } catch (err) {
+        console.error("Failed to load stores:", err);
+      }
+    }
 
-      if (!hasMMI && !hasGoogle) {
-        alert("MapMyIndia (Mappls) or Google Maps API Key is missing. Please save valid credentials in the 'API Settings & Credentials' tab first.");
-        switchTab('api-keys-tab', document.querySelectorAll('.tab-button')[1]);
+    function renderStoresTable(stores) {
+      const tbody = document.getElementById('storesTableBody');
+      if (!stores || stores.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No stores found. Click "Add New Store" to create one.</td></tr>`;
         return;
       }
 
-      const btn = document.getElementById('agg-trigger-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Executing API Places Fetch...';
+      tbody.innerHTML = stores.map(s => `
+        <tr>
+          <td><img src="${s.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" class="img-thumb" alt="store"></td>
+          <td><strong>${s.name || 'Store'}</strong></td>
+          <td><span class="badge badge-info">${s.category || 'General'}</span></td>
+          <td>${s.pincode || ''}</td>
+          <td>${s.address || ''}, ${s.city || ''}</td>
+          <td>${s.phone || ''}</td>
+          <td><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${s.rating || 4.5}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="editStore('${s.id || s._id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStore('${s.id || s._id}')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
 
-      const pincode = document.getElementById('agg-pincode').value;
-      const category = document.getElementById('agg-category').value;
+    function filterStoresTable() {
+      const q = document.getElementById('storeSearchInput').value.toLowerCase();
+      const filtered = storesData.filter(s => 
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.category && s.category.toLowerCase().includes(q)) ||
+        (s.city && s.city.toLowerCase().includes(q))
+      );
+      renderStoresTable(filtered);
+    }
+
+    function openAddStoreModal() {
+      document.getElementById('storeEditId').value = '';
+      document.getElementById('storeModalTitle').innerText = 'Add New Store';
+      document.getElementById('storeForm').reset();
+      document.getElementById('storeModal').classList.add('active');
+    }
+
+    function closeStoreModal() {
+      document.getElementById('storeModal').classList.remove('active');
+    }
+
+    function editStore(id) {
+      const store = storesData.find(s => (s.id === id || s._id === id));
+      if (!store) return;
+
+      document.getElementById('storeEditId').value = id;
+      document.getElementById('storeModalTitle').innerText = 'Edit Store Details';
+      document.getElementById('storeName').value = store.name || '';
+      document.getElementById('storeCategory').value = store.category || '';
+      document.getElementById('storePincode').value = store.pincode || '';
+      document.getElementById('storeAddress').value = store.address || '';
+      document.getElementById('storePhone').value = store.phone || '';
+      document.getElementById('storeCity').value = store.city || '';
+      document.getElementById('storeRating').value = store.rating || 4.5;
+      document.getElementById('storeImageUrl').value = store.imageUrl || '';
+
+      document.getElementById('storeModal').classList.add('active');
+    }
+
+    async function submitStoreForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('storeEditId').value;
+      const payload = {
+        name: document.getElementById('storeName').value,
+        category: document.getElementById('storeCategory').value,
+        pincode: document.getElementById('storePincode').value,
+        address: document.getElementById('storeAddress').value,
+        phone: document.getElementById('storePhone').value,
+        city: document.getElementById('storeCity').value,
+        rating: parseFloat(document.getElementById('storeRating').value) || 4.5,
+        imageUrl: document.getElementById('storeImageUrl').value || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
+      };
+
+      const url = id ? `/api/v1/stores/${id}` : '/api/v1/stores';
+      const method = id ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeStoreModal();
+        loadStores();
+      } else {
+        alert("Failed to save store");
+      }
+    }
+
+    async function deleteStore(id) {
+      if (!confirm("Are you sure you want to delete this store?")) return;
+      const res = await fetch(`/api/v1/stores/${id}`, { method: 'DELETE' });
+      if (res.ok) loadStores();
+    }
+
+    // SERVICE PROVIDERS MANAGER CRUD
+    async function loadProviders() {
+      try {
+        const res = await fetch('/api/v1/service-providers');
+        const json = await res.json();
+        providersData = json.data || [];
+        renderProvidersTable(providersData);
+      } catch (err) {
+        console.error("Failed to load providers:", err);
+      }
+    }
+
+    function renderProvidersTable(providers) {
+      const tbody = document.getElementById('providersTableBody');
+      if (!providers || providers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No service providers found. Click "Add New Service Provider".</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = providers.map(p => `
+        <tr>
+          <td><strong>${p.businessName || 'Provider'}</strong></td>
+          <td>${p.profession || ''}</td>
+          <td><span class="badge badge-info">${p.category || ''}</span></td>
+          <td>₹${p.startingPrice || 0}</td>
+          <td>${p.location || ''}</td>
+          <td>${p.phone || ''}</td>
+          <td><span class="badge ${p.verificationStatus === 'verified' ? 'badge-success' : 'badge-warning'}">${p.verificationStatus || 'not_submitted'}</span></td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="editProvider('${p.id || p._id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProvider('${p.id || p._id}')"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterProvidersTable() {
+      const q = document.getElementById('providerSearchInput').value.toLowerCase();
+      const filtered = providersData.filter(p => 
+        (p.businessName && p.businessName.toLowerCase().includes(q)) ||
+        (p.profession && p.profession.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q))
+      );
+      renderProvidersTable(filtered);
+    }
+
+    function openAddProviderModal() {
+      document.getElementById('providerEditId').value = '';
+      document.getElementById('providerModalTitle').innerText = 'Add New Service Provider';
+      document.getElementById('providerForm').reset();
+      document.getElementById('providerModal').classList.add('active');
+    }
+
+    function closeProviderModal() {
+      document.getElementById('providerModal').classList.remove('active');
+    }
+
+    function editProvider(id) {
+      const p = providersData.find(item => (item.id === id || item._id === id));
+      if (!p) return;
+
+      document.getElementById('providerEditId').value = id;
+      document.getElementById('providerModalTitle').innerText = 'Edit Service Provider Details';
+      document.getElementById('providerBusinessName').value = p.businessName || '';
+      document.getElementById('providerProfession').value = p.profession || '';
+      document.getElementById('providerCategory').value = p.category || '';
+      document.getElementById('providerStartingPrice').value = p.startingPrice || 299;
+      document.getElementById('providerPhone').value = p.phone || '';
+      document.getElementById('providerLocation').value = p.location || '';
+      document.getElementById('providerVerificationStatus').value = p.verificationStatus || 'verified';
+      document.getElementById('providerBio').value = p.bio || '';
+
+      document.getElementById('providerModal').classList.add('active');
+    }
+
+    async function submitProviderForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('providerEditId').value;
+      const payload = {
+        userId: 'admin_created_' + Date.now(),
+        businessName: document.getElementById('providerBusinessName').value,
+        profession: document.getElementById('providerProfession').value,
+        category: document.getElementById('providerCategory').value,
+        startingPrice: parseFloat(document.getElementById('providerStartingPrice').value) || 299,
+        phone: document.getElementById('providerPhone').value,
+        location: document.getElementById('providerLocation').value,
+        verificationStatus: document.getElementById('providerVerificationStatus').value,
+        bio: document.getElementById('providerBio').value,
+      };
+
+      const url = id ? `/api/v1/service-providers/${id}` : '/api/v1/service-providers';
+      const method = id ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeProviderModal();
+        loadProviders();
+      } else {
+        alert("Failed to save service provider");
+      }
+    }
+
+    async function deleteProvider(id) {
+      if (!confirm("Are you sure you want to delete this provider?")) return;
+      const res = await fetch(`/api/v1/service-providers/${id}`, { method: 'DELETE' });
+      if (res.ok) loadProviders();
+    }
+
+    // GOOGLE PLACE SEARCH & 1-CLICK IMPORT
+    async function executePlaceFetch() {
+      const pincode = document.getElementById('importPincodeInput').value;
+      const category = document.getElementById('importCategorySelect').value;
+      const msgDiv = document.getElementById('importStatusMessage');
+      const grid = document.getElementById('importResultsGrid');
+
+      msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching places from API...</span>`;
+      grid.innerHTML = '';
 
       try {
         const res = await fetch('/api/admin/fetch-directory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            option: currentAggOption,
-            pincode: pincode,
-            category: category,
-          })
+          body: JSON.stringify({ option: 'category', pincode, category })
         });
 
-        const data = await res.json();
-        if (res.ok && data.status === 'success') {
-          showToast(data.message || "Data fetch complete!");
-          loadDirectory();
+        const json = await res.json();
+        if (res.ok && json.directory) {
+          msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Found ${json.directory.length} places for pincode ${pincode} (${category}).</span>`;
+          
+          grid.innerHTML = json.directory.map((item, idx) => `
+            <div class="import-card">
+              <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" alt="place">
+              <div class="import-card-body">
+                <div class="import-card-title">${item.name || 'Local Business'}</div>
+                <div class="import-card-sub"><i class="fa-solid fa-location-dot"></i> ${item.address || 'Kochi'} | ${item.phone || ''}</div>
+                <div class="import-card-footer">
+                  <span><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${item.rating || 4.5}</span>
+                  <button class="btn btn-sm" onclick='importPlaceToDb(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Import to MongoDB
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('');
         } else {
-          alert(`Error: ${data.message || 'Failed to fetch places data'}`);
+          msgDiv.innerHTML = `<span style="color: var(--error);">${json.message || 'Error fetching places'}</span>`;
         }
       } catch (err) {
-        showToast("Error executing API data fetch.");
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-map-location-dot"></i> Fetch Live MapMyIndia Places';
+        msgDiv.innerHTML = `<span style="color: var(--error);">Failed to fetch places: ${err.message}</span>`;
       }
     }
 
-    async function loadDirectory() {
+    async function importPlaceToDb(item) {
       try {
-        const res = await fetch('/api/directory');
-        if (res.ok) {
-          directoryList = await res.json();
-          renderDirectoryTable(directoryList);
-        }
-      } catch (_) {}
-    }
-
-    function renderDirectoryTable(list) {
-      const tbody = document.getElementById('directory-table-body');
-      const totalBadge = document.getElementById('directory-total-badge');
-      const cardBadge = document.getElementById('directory-count-card');
-      
-      if (totalBadge) totalBadge.innerText = `${list.length} Real Listings`;
-      if (cardBadge) cardBadge.innerText = list.length;
-      if (!tbody) return;
-
-      tbody.innerHTML = '';
-
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No directory records. Configure MapMyIndia credentials in "API Settings" and click "Fetch Live MapMyIndia Places".</td></tr>';
-        return;
-      }
-
-      list.forEach(item => {
-        const tr = document.createElement('tr');
-        const secCatBadges = (item.secondaryCategories || [item.category]).map(c => `<span class="badge badge-secondary" style="font-size: 9px; margin-right: 4px; margin-top: 2px;">${escapeHtml(c)}</span>`).join('');
-        const mapUrl = item.mapUrl || item.websiteUrl || `https://www.mappls.com/${item.eLoc || item.id}`;
-
-        tr.innerHTML = `
-          <td>
-            <div style="font-weight: 700; color: #ffffff; font-size: 13px;">${escapeHtml(item.name)}</div>
-            <div style="font-size: 10px; color: var(--secondary); font-weight: bold; margin-top: 2px; font-family: monospace;">eLoc / ID: ${escapeHtml(item.eLoc || item.id)}</div>
-          </td>
-          <td>
-            <div><span class="badge">${escapeHtml(item.category)}</span></div>
-            <div style="margin-top: 4px;">${secCatBadges}</div>
-          </td>
-          <td>
-            <div style="font-weight: 600; color: #ffffff;"><i class="fa-solid fa-phone" style="font-size: 10px; color: var(--success); margin-right: 4px;"></i>${escapeHtml(item.phone)}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(item.address)}</div>
-            <div style="font-size: 10px; color: var(--secondary); font-weight: bold; margin-top: 2px;">PIN: ${escapeHtml(item.pincode)}</div>
-          </td>
-          <td>
-            <div style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${item.latitude || 9.93}, ${item.longitude || 76.26}</div>
-            <a href="${mapUrl}" target="_blank" style="font-size: 10px; color: var(--secondary); text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px;">
-              <i class="fa-solid fa-map-location-dot"></i> View on MapMyIndia
-            </a>
-          </td>
-          <td>
-            <div style="color: var(--warning); font-weight: bold; font-size: 13px;">★ ${item.rating || 4.5}</div>
-            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${item.reviewCount || 15} reviews</div>
-          </td>
-          <td>
-            <div style="font-size: 11px; color: #ffffff; font-weight: 500;">${escapeHtml(item.workingHours || '08:00 AM - 08:00 PM')}</div>
-            <div style="font-size: 10px; color: var(--success); font-weight: bold; margin-top: 2px;">● Verified Place</div>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterDirectoryTable() {
-      const query = document.getElementById('dir-search-input').value.toLowerCase().trim();
-      const filtered = directoryList.filter(item => 
-        item.name.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query) ||
-        item.pincode.includes(query) ||
-        (item.city && item.city.toLowerCase().includes(query)) ||
-        (item.address && item.address.toLowerCase().includes(query)) ||
-        (item.eLoc && item.eLoc.toLowerCase().includes(query))
-      );
-      renderDirectoryTable(filtered);
-    }
-
-    async function loadBanners() {
-      try {
-        const res = await fetch('/api/banners');
-        if (res.ok) {
-          banners = await res.json();
-          renderBannersList();
-        }
-      } catch (_) {}
-    }
-
-    function renderBannersList() {
-      const container = document.getElementById('banners-list-container');
-      container.innerHTML = '';
-      banners.forEach(b => {
-        const item = document.createElement('div');
-        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border: 1px solid var(--border); border-radius: 14px; background: rgba(30, 41, 59, 0.3);';
-        item.innerHTML = `
-          <div>
-            <div style="font-weight: 700; color: white;">${escapeHtml(b.promoTitle)}</div>
-            <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(b.promoSubtitle)} • ${escapeHtml(b.promoDiscount)}</div>
-          </div>
-          <button class="btn btn-secondary" onclick="deleteBanner('${b.id}')" style="padding: 6px 12px; color: var(--error); border-color: rgba(248, 113, 113, 0.3);">Delete</button>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    async function saveBanner() {
-      const title = document.getElementById('promo-title').value;
-      const subtitle = document.getElementById('promo-subtitle').value;
-      const discount = document.getElementById('promo-discount').value;
-      const imageUrl = document.getElementById('custom-image-url').value;
-
-      if (!title) return alert("Promo title is required");
-
-      try {
-        const res = await fetch('/api/banners', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ promoTitle: title, promoSubtitle: subtitle, promoDiscount: discount, bannerImageUrl: imageUrl })
-        });
-        if (res.ok) {
-          showToast("Banner saved & synced!");
-          resetBannerForm();
-          loadBanners();
-        }
-      } catch (_) {}
-    }
-
-    async function deleteBanner(id) {
-      if (!confirm("Delete banner?")) return;
-      try {
-        const res = await fetch(`/api/banners/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          showToast("Banner deleted");
-          loadBanners();
-        }
-      } catch (_) {}
-    }
-
-    function resetBannerForm() {
-      document.getElementById('banner-id').value = '';
-      document.getElementById('promo-subtitle').value = '';
-      document.getElementById('promo-title').value = '';
-      document.getElementById('promo-discount').value = '';
-      document.getElementById('custom-image-url').value = '';
-      updateLivePreview();
-    }
-
-    function updateLivePreview() {
-      const sub = document.getElementById('promo-subtitle').value || 'Save 30% Today!';
-      const title = document.getElementById('promo-title').value || 'Exclusive discounts\non home services';
-      const img = document.getElementById('custom-image-url').value;
-
-      document.getElementById('prev-subtitle').innerText = sub;
-      document.getElementById('prev-title').innerHTML = title.replace(/\n/g, '<br>');
-      if (img) document.getElementById('prev-img').src = img;
-    }
-
-    async function loadCategories() {
-      try {
-        const res = await fetch('/api/categories');
-        if (res.ok) {
-          categories = await res.json();
-          renderCategoriesList();
-        }
-      } catch (_) {}
-    }
-
-    function renderCategoriesList() {
-      const container = document.getElementById('categories-list-container');
-      container.innerHTML = '';
-      categories.forEach(c => {
-        const item = document.createElement('div');
-        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: rgba(30, 41, 59, 0.3);';
-        item.innerHTML = `
-          <div style="font-weight: 600; color: white;">${escapeHtml(c)}</div>
-          <button class="btn btn-secondary" onclick="deleteCategory('${c}')" style="padding: 4px 10px; font-size: 12px; color: var(--error);">Delete</button>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    async function addCategory() {
-      const name = document.getElementById('new-category-name').value.trim();
-      if (!name) return alert("Category name is required");
-      try {
-        const res = await fetch('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ category: name })
-        });
-        if (res.ok) {
-          showToast("Category added!");
-          document.getElementById('new-category-name').value = '';
-          loadCategories();
-        }
-      } catch (_) {}
-    }
-
-    async function deleteCategory(name) {
-      if (!confirm(`Delete category "${name}"?`)) return;
-      try {
-        const res = await fetch(`/api/categories/${encodeURIComponent(name)}`, { method: 'DELETE' });
-        if (res.ok) {
-          showToast("Category deleted");
-          loadCategories();
-        }
-      } catch (_) {}
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast-message');
-      document.getElementById('toast-text').innerText = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-
-    let dauChartInstance = null;
-    let categoryChartInstance = null;
-
-    async function loadAnalytics() {
-      try {
-        const res = await fetch('/api/analytics/overview');
-        if (!res.ok) return;
-        const data = await res.json();
-        
-        document.getElementById('dau-value').innerText = data.dau || 0;
-        document.getElementById('mau-value').innerText = data.mau || 0;
-        document.getElementById('conversion-value').innerText = (data.conversionRate || 0) + '%';
-        if (data.activeConnections !== undefined) {
-          updateLiveConnectedAppCount(data.activeConnections, data.connectedDevices);
-        }
-
-        const catRes = await fetch('/api/analytics/categories');
-        const catData = catRes.ok ? await catRes.json() : [];
-
-        renderCharts(data, catData);
-      } catch (_) {}
-    }
-
-    function renderCharts(overview, catData) {
-      const ctx1 = document.getElementById('dauChart').getContext('2d');
-      if (dauChartInstance) dauChartInstance.destroy();
-      dauChartInstance = new Chart(ctx1, {
-        type: 'line',
-        data: {
-          labels: ['6 Days Ago', '5 Days Ago', '4 Days Ago', '3 Days Ago', '2 Days Ago', 'Yesterday', 'Today'],
-          datasets: [{
-            label: 'DAU',
-            data: [120, 145, 160, 190, 210, 240, overview.dau || 280],
-            borderColor: '#6366f1',
-            backgroundColor: 'rgba(99, 102, 241, 0.15)',
-            fill: true,
-            tension: 0.4,
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-
-      const ctx2 = document.getElementById('categoryChart').getContext('2d');
-      if (categoryChartInstance) categoryChartInstance.destroy();
-      const labels = catData.map(c => c.category);
-      const values = catData.map(c => c.clicks);
-
-      categoryChartInstance = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-          labels: labels.length ? labels : ['Electricians', 'Plumbers', 'Cleaners', 'Mechanics'],
-          datasets: [{
-            data: values.length ? values : [85, 62, 45, 30],
-            backgroundColor: ['rgba(99, 102, 241, 0.8)', 'rgba(6, 182, 212, 0.8)', 'rgba(236, 72, 153, 0.8)', 'rgba(16, 185, 129, 0.8)'],
-            borderRadius: 8,
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-    }
-
-    function updateLiveConnectedAppCount(count, devices) {
-      const el1 = document.getElementById('live-apps-count');
-      const el2 = document.getElementById('header-connected-count');
-      const el3 = document.getElementById('connected-devices-badge');
-      if (el1) el1.innerText = count;
-      if (el2) el2.innerText = count;
-      if (el3) el3.innerText = `${count} Active`;
-
-      const tbody = document.getElementById('connected-devices-table-body');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-      if (!devices || devices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No live devices connected. Launch the Flutter app to view live device session streams.</td></tr>';
-        return;
-      }
-      devices.forEach(dev => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-weight: bold; font-family: monospace; color: var(--primary);">${escapeHtml(dev.deviceId)}</td>
-          <td style="font-weight: 600; color: #ffffff;">${escapeHtml(dev.deviceName)}</td>
-          <td><span class="badge">${escapeHtml(dev.platform)}</span></td>
-          <td style="font-family: monospace; color: var(--text-muted); font-size: 11px;">${escapeHtml(dev.ip)}</td>
-          <td style="color: var(--text-muted);">${escapeHtml(new Date(dev.connectedAt).toLocaleTimeString())}</td>
-          <td><span style="color: var(--success); font-weight: bold;">● Active</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function initWebSocket() {
-      try {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${wsProtocol}//${window.location.host}?token=admin_console`);
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'ADMIN_TELEMETRY' && data.data) {
-              updateLiveConnectedAppCount(data.data.activeConnections || 0, data.data.connectedDevices || []);
-            } else if (data.type === 'CONFIG_UPDATE') {
-              if (data.businessDirectory) {
-                directoryList = data.businessDirectory;
-                renderDirectoryTable(directoryList);
-              }
-            }
-          } catch (_) {}
+        const payload = {
+          name: item.name,
+          category: item.category || 'General',
+          pincode: item.pincode || '682001',
+          address: item.address || 'Kochi, Kerala',
+          phone: item.phone || '+91 9847000000',
+          city: item.city || 'Kochi',
+          rating: item.rating || 4.5,
+          imageUrl: item.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
         };
-        ws.onclose = () => setTimeout(initWebSocket, 5000);
-      } catch (_) {}
+
+        const res = await fetch('/api/v1/stores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          alert(`Successfully imported "${item.name}" into MongoDB Atlas Stores!`);
+          loadStores();
+        } else {
+          alert("Import failed.");
+        }
+      } catch (err) {
+        alert("Import error: " + err.message);
+      }
     }
 
-    // Initialize
-    loadApiKeys();
-    loadAnalytics();
-    loadDirectory();
-    loadBanners();
-    loadCategories();
-    initWebSocket();
+    // API KEYS MANAGEMENT
+    async function loadApiKeys() {
+      try {
+        const res = await fetch('/api/admin/api-keys');
+        if (res.ok) {
+          const keys = await res.json();
+          document.getElementById('googleMapsApiKey').value = keys.googleMapsApiKey || '';
+        }
+      } catch (err) {
+        console.warn("Failed to load API keys:", err);
+      }
+    }
+
+    async function saveApiKeys(e) {
+      e.preventDefault();
+      const payload = {
+        googleMapsApiKey: document.getElementById('googleMapsApiKey').value,
+      };
+
+      const res = await fetch('/api/admin/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert("Google Places API key saved successfully!");
+      } else {
+        alert("Failed to save Google API key.");
+      }
+    }
   </script>
 </body>
 </html>
