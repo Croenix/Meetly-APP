@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   /// Default server host configuration
   static const String defaultLocalhost = 'http://localhost:5000';
-  static const String defaultAndroidEmulatorHost = 'http://10.0.2.2:5000';
+  static const String defaultAndroidEmulatorHost = 'http://192.168.1.3:5000';
   static const int defaultPort = 5000;
 
   /// Cryptographic shared application secret for API handshakes
@@ -54,7 +54,8 @@ class AppConfig {
   static String get storesEndpoint => '$baseUrl/api/v1/stores';
 
   /// Service Providers API endpoint
-  static String get serviceProvidersEndpoint => '$baseUrl/api/v1/service-providers';
+  static String get serviceProvidersEndpoint =>
+      '$baseUrl/api/v1/service-providers';
 
   /// Banners API endpoint
   static String get bannersEndpoint => '$baseUrl/api/v1/banners';
@@ -63,5 +64,6 @@ class AppConfig {
   static String get settingsEndpoint => '$baseUrl/api/v1/settings';
 
   /// Admin Business Aggregator / Directory Endpoint
-  static String get adminDirectoryEndpoint => '$baseUrl/api/admin/fetch-directory';
+  static String get adminDirectoryEndpoint =>
+      '$baseUrl/api/admin/fetch-directory';
 }

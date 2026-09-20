@@ -45,7 +45,7 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const SHARED_APP_SECRET = 'meetly_secure_secret_2026';
+const SHARED_APP_SECRET = process.env.SHARED_APP_SECRET || 'meetly_secure_secret_2026';
 
 // In-Memory Valid Handshake Session Tokens Store (Token -> Session Info)
 const validHandshakeTokens = new Map();
