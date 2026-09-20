@@ -5,7 +5,9 @@ const reviewSubSchema = new mongoose.Schema(
     author: { type: String, default: 'Google User' },
     rating: { type: Number, default: 5 },
     text: { type: String, default: '' },
+    comment: { type: String, default: '' },
     time: { type: String, default: '' },
+    profilePhoto: { type: String, default: '' },
   },
   { _id: false }
 );
@@ -89,6 +91,14 @@ const storeSchema = new mongoose.Schema(
     workingHours: {
       type: String,
       default: '08:00 AM - 08:00 PM',
+    },
+    operatingHours: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    timetable: {
+      type: [String],
+      default: [],
     },
     isOpen: {
       type: Boolean,

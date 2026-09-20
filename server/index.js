@@ -264,8 +264,64 @@ async function fetchSerpApiPlacesData(apiKey, pincode, categoryFilter = null) {
             continue;
           }
 
+          // Extract Review Comments / Customer Feedback
+          let reviewsList = [];
+          if (Array.isArray(place.user_reviews) && place.user_reviews.length > 0) {
+            reviewsList = place.user_reviews.map(r => ({
+              author: r.username || r.name || 'Google User',
+              rating: Number(r.rating) || 5,
+              text: r.snippet || r.description || r.text || '',
+              comment: r.snippet || r.description || r.text || '',
+              time: r.date || 'Recent',
+              profilePhoto: r.profile_photo || ''
+            }));
+          } else if (Array.isArray(place.reviews) && place.reviews.length > 0) {
+            reviewsList = place.reviews.map(r => typeof r === 'object' ? {
+              author: r.username || r.name || 'Google User',
+              rating: Number(r.rating) || 5,
+              text: r.snippet || r.description || r.text || '',
+              comment: r.snippet || r.description || r.text || '',
+              time: r.date || 'Recent',
+              profilePhoto: r.profile_photo || ''
+            } : null).filter(Boolean);
+          } else if (place.snippet) {
+            reviewsList = [{
+              author: 'Google User',
+              rating: Number(place.rating) || 5,
+              text: place.snippet,
+              comment: place.snippet,
+              time: 'Recent Review'
+            }];
+          }
+
+          // Extract Operating Hours & Day-by-Day Timetable
+          let timetable = [];
+          let workingHoursSummary = '08:00 AM - 08:00 PM';
+          if (place.operating_hours && typeof place.operating_hours === 'object') {
+            const opHours = place.operating_hours;
+            const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            daysOrder.forEach(d => {
+              if (opHours[d]) {
+                const dayCap = d.charAt(0).toUpperCase() + d.slice(1);
+                timetable.push(`${dayCap}: ${opHours[d]}`);
+              }
+            });
+            if (timetable.length > 0) {
+              workingHoursSummary = timetable.join(' | ');
+            }
+          } else if (typeof place.operating_hours === 'string') {
+            workingHoursSummary = place.operating_hours;
+            timetable = [place.operating_hours];
+          }
+
+          if (place.open_state && !workingHoursSummary.includes(place.open_state)) {
+            workingHoursSummary = `${place.open_state} (${workingHoursSummary})`;
+          }
+
           const lat = place.gps_coordinates ? place.gps_coordinates.latitude : 9.9312;
           const lng = place.gps_coordinates ? place.gps_coordinates.longitude : 76.2673;
+
+          const numReviews = typeof place.reviews === 'number' ? place.reviews : (reviewsList.length > 0 ? reviewsList.length : 12);
 
           listings.push({
             id: place.place_id || place.data_id || `serp_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
@@ -273,19 +329,22 @@ async function fetchSerpApiPlacesData(apiKey, pincode, categoryFilter = null) {
             name: place.title || `${cat} Services`,
             category: cat,
             secondaryCategories: [place.type || cat, 'Local Business'],
-            phone: place.phone || 'Contact via Google Maps',
+            phone: place.phone || place.phone_number || '+91 9847000000',
             address: formattedAddress || `${pinObj.city}, PIN - ${pincode}`,
             pincode: pincode,
             city: pinObj.city,
             latitude: lat,
             longitude: lng,
-            rating: place.rating || 4.5,
-            reviewCount: place.reviews || 10,
+            rating: Number(place.rating) || 4.5,
+            reviewCount: numReviews,
+            reviews: reviewsList,
             imageUrl: place.thumbnail || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
             images: place.thumbnail ? [place.thumbnail] : ['https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'],
-            workingHours: place.operating_hours ? 'Open Now' : '08:00 AM - 08:00 PM',
+            workingHours: workingHoursSummary,
+            operatingHours: place.operating_hours || {},
+            timetable: timetable,
             isOpenNow: place.open_state ? place.open_state.toLowerCase().includes('open') : true,
-            websiteUrl: place.website || place.link || `https://maps.google.com/?q=${encodeURIComponent(place.title || cat)}`,
+            websiteUrl: place.website || place.link || '',
             mapUrl: place.link || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
             updatedAt: new Date().toISOString(),
           });

@@ -780,12 +780,22 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Phone Number *</label>
+            <label>Phone / Mobile Number *</label>
             <input type="text" id="storePhone" class="form-control" required placeholder="+91 9847000000">
           </div>
           <div class="form-group">
             <label>City *</label>
             <input type="text" id="storeCity" class="form-control" required placeholder="Kochi">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Website URL</label>
+            <input type="text" id="storeWebsiteUrl" class="form-control" placeholder="https://www.example.com">
+          </div>
+          <div class="form-group">
+            <label>Working Hours / Schedule</label>
+            <input type="text" id="storeWorkingHours" class="form-control" placeholder="08:00 AM - 08:00 PM">
           </div>
         </div>
         <div class="form-row">
@@ -803,6 +813,22 @@
           <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Store</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VIEW STORE DETAILS, TIMETABLE & REVIEWS -->
+  <div class="modal-overlay" id="storeDetailsModal">
+    <div class="modal" style="max-width: 650px;">
+      <div class="modal-header">
+        <div class="modal-title" id="detailsModalTitle">Store Details & Customer Reviews</div>
+        <button class="close-btn" onclick="closeStoreDetailsModal()">&times;</button>
+      </div>
+      <div id="storeDetailsBody" style="font-size: 14px; line-height: 1.6;">
+        <!-- Dynamic Content -->
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="closeStoreDetailsModal()">Close</button>
+      </div>
     </div>
   </div>
 
@@ -981,21 +1007,97 @@
         return;
       }
 
-      tbody.innerHTML = stores.map(s => `
+      tbody.innerHTML = stores.map(s => {
+        const reviewCount = s.reviews ? s.reviews.length : (s.reviewCount || 0);
+        const hasWeb = s.websiteUrl && s.websiteUrl.trim().length > 0;
+        return `
         <tr>
           <td><img src="${s.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" class="img-thumb" alt="store"></td>
-          <td><strong>${s.name || 'Store'}</strong></td>
+          <td>
+            <strong>${s.name || 'Store'}</strong>
+            ${hasWeb ? `<br><a href="${s.websiteUrl}" target="_blank" style="font-size: 11px; color: var(--secondary); text-decoration: underline;"><i class="fa-solid fa-globe"></i> Website</a>` : ''}
+          </td>
           <td><span class="badge badge-info">${s.category || 'General'}</span></td>
           <td>${s.pincode || ''}</td>
           <td>${s.address || ''}, ${s.city || ''}</td>
-          <td>${s.phone || ''}</td>
-          <td><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${s.rating || 4.5}</td>
+          <td><i class="fa-solid fa-phone" style="color: var(--success); font-size: 11px;"></i> ${s.phone || 'N/A'}</td>
+          <td><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${s.rating || 4.5} (${reviewCount})</td>
           <td>
-            <button class="btn btn-secondary btn-sm" onclick="editStore('${s.id || s._id}')"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStore('${s.id || s._id}')"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn btn-secondary btn-sm" title="View Details, Timetable & Reviews" onclick="viewStoreDetails('${s.id || s._id}')"><i class="fa-solid fa-eye"></i></button>
+            <button class="btn btn-secondary btn-sm" title="Edit Store" onclick="editStore('${s.id || s._id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-danger btn-sm" title="Delete Store" onclick="deleteStore('${s.id || s._id}')"><i class="fa-solid fa-trash"></i></button>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
+    }
+
+    function viewStoreDetails(id) {
+      const s = storesData.find(st => (st.id === id || st._id === id));
+      if (!s) return;
+
+      document.getElementById('detailsModalTitle').innerText = `${s.name || 'Store'} - Details & Reviews`;
+      const body = document.getElementById('storeDetailsBody');
+
+      let reviewsHtml = '<p style="color: var(--text-muted); font-size: 13px;">No review comments recorded.</p>';
+      if (s.reviews && s.reviews.length > 0) {
+        reviewsHtml = s.reviews.map(r => `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px 14px; margin-bottom: 8px; border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong><i class="fa-solid fa-user-circle"></i> ${r.author || 'Google User'}</strong>
+              <span style="color: var(--warning); font-size: 12px;"><i class="fa-solid fa-star"></i> ${r.rating || 5} (${r.time || 'Recent'})</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-main);">${r.comment || r.text || 'Great business!'}</div>
+          </div>
+        `).join('');
+      }
+
+      let timetableHtml = `<p style="font-size: 13px;">${s.workingHours || '08:00 AM - 08:00 PM'}</p>`;
+      if (s.timetable && s.timetable.length > 0) {
+        timetableHtml = `<ul style="padding-left: 18px; font-size: 13px; margin: 4px 0;">${s.timetable.map(t => `<li>${t}</li>`).join('')}</ul>`;
+      }
+
+      body.innerHTML = `
+        <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+          <img src="${s.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" style="width: 120px; height: 100px; object-fit: cover; border-radius: 8px;" alt="Store">
+          <div>
+            <h3 style="margin: 0 0 6px 0; color: white;">${s.name}</h3>
+            <div><span class="badge badge-info">${s.category}</span> <span class="badge badge-success">${s.isOpenNow ? 'Open Now' : 'Closed'}</span></div>
+            <div style="font-size: 13px; margin-top: 6px;"><i class="fa-solid fa-location-dot" style="color: var(--secondary);"></i> ${s.address}, ${s.city} (PIN: ${s.pincode})</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px;">
+          <div>
+            <strong style="color: var(--secondary);"><i class="fa-solid fa-phone"></i> Mobile / Phone Number:</strong>
+            <div style="font-size: 14px; font-weight: 600; margin-top: 2px;">${s.phone || 'N/A'}</div>
+          </div>
+          <div>
+            <strong style="color: var(--secondary);"><i class="fa-solid fa-globe"></i> Website URL:</strong>
+            <div style="font-size: 13px; margin-top: 2px;">
+              ${s.websiteUrl ? `<a href="${s.websiteUrl}" target="_blank" style="color: var(--secondary); text-decoration: underline;">${s.websiteUrl}</a>` : 'Not provided'}
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <strong style="color: var(--warning);"><i class="fa-solid fa-clock"></i> Working Hours & Timetable Schedule:</strong>
+          ${timetableHtml}
+        </div>
+
+        <div>
+          <strong style="color: var(--accent);"><i class="fa-solid fa-comments"></i> Customer Reviews & Comments (${s.reviews ? s.reviews.length : 0}):</strong>
+          <div style="margin-top: 8px; max-height: 220px; overflow-y: auto;">
+            ${reviewsHtml}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('storeDetailsModal').classList.add('active');
+    }
+
+    function closeStoreDetailsModal() {
+      document.getElementById('storeDetailsModal').classList.remove('active');
     }
 
     function filterStoresTable() {
@@ -1031,6 +1133,8 @@
       document.getElementById('storeAddress').value = store.address || '';
       document.getElementById('storePhone').value = store.phone || '';
       document.getElementById('storeCity').value = store.city || '';
+      document.getElementById('storeWebsiteUrl').value = store.websiteUrl || '';
+      document.getElementById('storeWorkingHours').value = store.workingHours || '';
       document.getElementById('storeRating').value = store.rating || 4.5;
       document.getElementById('storeImageUrl').value = store.imageUrl || '';
 
@@ -1047,6 +1151,8 @@
         address: document.getElementById('storeAddress').value,
         phone: document.getElementById('storePhone').value,
         city: document.getElementById('storeCity').value,
+        websiteUrl: document.getElementById('storeWebsiteUrl').value,
+        workingHours: document.getElementById('storeWorkingHours').value || '08:00 AM - 08:00 PM',
         rating: parseFloat(document.getElementById('storeRating').value) || 4.5,
         imageUrl: document.getElementById('storeImageUrl').value || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
       };
@@ -1080,6 +1186,7 @@
         const res = await fetch('/api/v1/service-providers');
         const json = await res.json();
         providersData = json.data || [];
+        document.getElementById('statTotalProviders').innerText = providersData.length;
         renderProvidersTable(providersData);
       } catch (err) {
         console.error("Failed to load providers:", err);
@@ -1089,7 +1196,7 @@
     function renderProvidersTable(providers) {
       const tbody = document.getElementById('providersTableBody');
       if (!providers || providers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No service providers found. Click "Add New Service Provider".</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No service providers found. Click "Add New Service Provider" to create one.</td></tr>`;
         return;
       }
 
@@ -1097,11 +1204,11 @@
         <tr>
           <td><strong>${p.businessName || 'Provider'}</strong></td>
           <td>${p.profession || ''}</td>
-          <td><span class="badge badge-info">${p.category || ''}</span></td>
-          <td>₹${p.startingPrice || 0}</td>
+          <td><span class="badge badge-info">${p.category || 'General'}</span></td>
+          <td>₹${p.startingPrice || 299}</td>
           <td>${p.location || ''}</td>
           <td>${p.phone || ''}</td>
-          <td><span class="badge ${p.verificationStatus === 'verified' ? 'badge-success' : 'badge-warning'}">${p.verificationStatus || 'not_submitted'}</span></td>
+          <td><span class="badge badge-success">${p.verificationStatus || 'verified'}</span></td>
           <td>
             <button class="btn btn-secondary btn-sm" onclick="editProvider('${p.id || p._id}')"><i class="fa-solid fa-pen"></i></button>
             <button class="btn btn-danger btn-sm" onclick="deleteProvider('${p.id || p._id}')"><i class="fa-solid fa-trash"></i></button>
@@ -1115,7 +1222,8 @@
       const filtered = providersData.filter(p => 
         (p.businessName && p.businessName.toLowerCase().includes(q)) ||
         (p.profession && p.profession.toLowerCase().includes(q)) ||
-        (p.category && p.category.toLowerCase().includes(q))
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.location && p.location.toLowerCase().includes(q))
       );
       renderProvidersTable(filtered);
     }
@@ -1132,19 +1240,19 @@
     }
 
     function editProvider(id) {
-      const p = providersData.find(item => (item.id === id || item._id === id));
-      if (!p) return;
+      const provider = providersData.find(p => (p.id === id || p._id === id));
+      if (!provider) return;
 
       document.getElementById('providerEditId').value = id;
       document.getElementById('providerModalTitle').innerText = 'Edit Service Provider Details';
-      document.getElementById('providerBusinessName').value = p.businessName || '';
-      document.getElementById('providerProfession').value = p.profession || '';
-      document.getElementById('providerCategory').value = p.category || '';
-      document.getElementById('providerStartingPrice').value = p.startingPrice || 299;
-      document.getElementById('providerPhone').value = p.phone || '';
-      document.getElementById('providerLocation').value = p.location || '';
-      document.getElementById('providerVerificationStatus').value = p.verificationStatus || 'verified';
-      document.getElementById('providerBio').value = p.bio || '';
+      document.getElementById('providerBusinessName').value = provider.businessName || '';
+      document.getElementById('providerProfession').value = provider.profession || '';
+      document.getElementById('providerCategory').value = provider.category || '';
+      document.getElementById('providerStartingPrice').value = provider.startingPrice || 299;
+      document.getElementById('providerPhone').value = provider.phone || '';
+      document.getElementById('providerLocation').value = provider.location || '';
+      document.getElementById('providerVerificationStatus').value = provider.verificationStatus || 'verified';
+      document.getElementById('providerBio').value = provider.bio || '';
 
       document.getElementById('providerModal').classList.add('active');
     }
@@ -1214,25 +1322,43 @@
           msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Found ${json.directory.length} Google Places with rich details for pincode ${pincode} (${category}).</span>`;
           bulkBtn.style.display = 'inline-flex';
           
-          grid.innerHTML = json.directory.map((item, idx) => `
+          grid.innerHTML = json.directory.map((item, idx) => {
+            const hasWeb = item.websiteUrl && item.websiteUrl.trim().length > 0;
+            const reviews = item.reviews || [];
+            const firstReview = reviews.length > 0 ? reviews[0] : null;
+            const timetableText = item.timetable && item.timetable.length > 0
+              ? item.timetable.slice(0, 2).join(', ') + (item.timetable.length > 2 ? '...' : '')
+              : (item.workingHours || '08:00 AM - 08:00 PM');
+
+            return `
             <div class="import-card">
               <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" alt="place">
               <div class="import-card-body">
                 <div class="import-card-title">${item.name || 'Local Business'}</div>
                 <div class="import-card-sub"><i class="fa-solid fa-location-dot"></i> ${item.address || 'Kochi'}</div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
-                  <div><i class="fa-solid fa-phone"></i> ${item.phone || 'No phone'}</div>
-                  ${item.websiteUrl ? `<div><i class="fa-solid fa-globe"></i> <a href="${item.websiteUrl}" target="_blank" style="color: var(--secondary);">${item.websiteUrl}</a></div>` : ''}
+                
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;">
+                  <div><i class="fa-solid fa-phone" style="color: var(--success);"></i> <strong>Phone:</strong> ${item.phone || 'No phone'}</div>
+                  ${hasWeb ? `<div><i class="fa-solid fa-globe" style="color: var(--secondary);"></i> <strong>Website:</strong> <a href="${item.websiteUrl}" target="_blank" style="color: var(--secondary); text-decoration: underline;">${item.websiteUrl}</a></div>` : ''}
+                  <div><i class="fa-solid fa-clock" style="color: var(--warning);"></i> <strong>Schedule:</strong> ${timetableText}</div>
                 </div>
+
+                ${firstReview ? `
+                  <div style="background: rgba(255,255,255,0.04); border-left: 3px solid var(--secondary); padding: 6px 10px; font-size: 11px; margin-bottom: 10px; border-radius: 4px;">
+                    <strong style="color: var(--text-main);"><i class="fa-solid fa-comment-dots"></i> ${firstReview.author || 'Reviewer'}:</strong> "${firstReview.comment || firstReview.text}"
+                  </div>
+                ` : ''}
+
                 <div class="import-card-footer">
-                  <span><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${item.rating || 4.5} (${item.reviewCount || 10} reviews)</span>
+                  <span><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${item.rating || 4.5} (${item.reviewCount || reviews.length} reviews)</span>
                   <button class="btn btn-sm" onclick="importSinglePlaceToDb(${idx})">
                     <i class="fa-solid fa-cloud-arrow-down"></i> Import to MongoDB
                   </button>
                 </div>
               </div>
             </div>
-          `).join('');
+            `;
+          }).join('');
         } else {
           msgDiv.innerHTML = `<span style="color: var(--error);">${json.message || 'Error fetching places'}</span>`;
         }
