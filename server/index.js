@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -8,6 +9,10 @@ const WebSocket = require('ws');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
 const bigQueryService = require('./bigquery_service');
+const connectDB = require('./config/db');
+const storeRoutes = require('./routes/storeRoutes');
+const serviceProviderRoutes = require('./routes/serviceProviderRoutes');
+const { errorResponse } = require('./utils/apiResponse');
 
 // Initialize Firebase Admin SDK with Resilient Fallbacks
 let db;
@@ -76,6 +81,11 @@ const FIREBASE_USERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.fi
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- MODULAR BACKEND API ROUTES ---
+app.use('/api/v1/stores', storeRoutes);
+app.use('/api/v1/service-providers', serviceProviderRoutes);
+app.use('/api/v1/providers', serviceProviderRoutes);
 
 // --- SECURE HANDSHAKE ENDPOINT ---
 app.post('/api/v1/auth/handshake', (req, res) => {
@@ -1129,7 +1139,16 @@ function getLocalNetworkIp() {
   return 'localhost';
 }
 
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('[Unhandled Server Error]', err.stack || err);
+  return errorResponse(res, err.statusCode || 500, err.message || 'Internal Server Error', err);
+});
+
 server.listen(PORT, async () => {
+  // Initialize MongoDB Connection
+  await connectDB();
+
   const networkIp = getLocalNetworkIp();
   console.log(`Meetly Server & WebSocket running on http://localhost:${PORT} (Network: http://${networkIp}:${PORT})`);
   

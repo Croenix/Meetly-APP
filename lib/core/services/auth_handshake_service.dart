@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 class HandshakeResponse {
   final bool isSuccess;
@@ -34,18 +35,18 @@ class HandshakeResponse {
     );
   }
 }
-
 class AuthHandshakeService {
-  static const String appSecret = 'meetly_secure_secret_2026';
+  static String get appSecret => AppConfig.sharedAppSecret;
 
   // Perform secure HTTP POST handshake exchange
   static Future<HandshakeResponse> performHandshake({
-    required String serverBaseUrl,
+    String? serverBaseUrl,
     required String userId,
     required String deviceId,
   }) async {
     try {
-      final endpointUrl = Uri.parse('$serverBaseUrl/api/v1/auth/handshake');
+      final baseUrl = (serverBaseUrl != null && serverBaseUrl.isNotEmpty) ? serverBaseUrl : AppConfig.baseUrl;
+      final endpointUrl = Uri.parse('$baseUrl/api/v1/auth/handshake');
       if (kDebugMode) {
         print("HandshakeService: Sending POST handshake request to $endpointUrl...");
       }

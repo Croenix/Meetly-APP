@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../database/local_database.dart';
 import '../models/business_listing.dart';
+import '../config/app_config.dart';
 
 // Helper to resolve the correct regional database instance
 FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
@@ -329,12 +330,10 @@ class SyncService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print("SyncService: Failed to fetch server_url from Firebase RTDB ($e). Using default.");
+        print("SyncService: Failed to fetch server_url from Firebase RTDB ($e). Using AppConfig default.");
       }
     }
-    return (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
-        ? 'http://10.0.2.2:5000'
-        : 'http://localhost:5000';
+    return AppConfig.baseUrl;
   }
 
   // Trigger 3-Option Admin Pincode Business Aggregator Engine

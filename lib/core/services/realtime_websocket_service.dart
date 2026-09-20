@@ -8,6 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../models/device_session_model.dart';
 import '../database/local_database.dart';
 import 'auth_handshake_service.dart';
+import '../config/app_config.dart';
 
 // Backward compatibility typedefs
 typedef AdminTelemetryData = SystemTelemetryModel;
@@ -193,8 +194,8 @@ class RealtimeWebSocketService {
 
   // Resolves the dynamic server IP / WebSocket URL from Firebase Realtime Database node (/server_url & /ws_url)
   Future<Map<String, String>> _resolveDynamicUrls() async {
-    String httpUrl = 'http://localhost:5000';
-    String wsUrl = 'ws://localhost:5000';
+    String httpUrl = AppConfig.baseUrl;
+    String wsUrl = AppConfig.wsUrl;
 
     try {
       final db = FirebaseDatabase.instanceFor(
