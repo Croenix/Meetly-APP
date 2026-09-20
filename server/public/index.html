@@ -690,15 +690,27 @@
       </div>
     </div>
 
-    <!-- TAB 4: GOOGLE PLACES SEARCH & 1-CLICK IMPORT -->
+    <!-- TAB 4: GOOGLE PLACES SEARCH & BULK IMPORT -->
     <div id="tab-import" class="tab-content">
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fa-solid fa-magnifying-glass-location" style="color: var(--primary);"></i> Google Places Search & Import (SerpAPI Engine)</div>
+          <div class="panel-title"><i class="fa-solid fa-magnifying-glass-location" style="color: var(--primary);"></i> Google Places Search & Bulk District Import (SerpAPI Engine)</div>
         </div>
-        <div class="form-row" style="margin-bottom: 20px;">
+
+        <!-- Mode Switcher: Pincode vs District Bulk -->
+        <div style="display: flex; gap: 12px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 6px; border-radius: 8px; border: 1px solid var(--border);">
+          <button type="button" class="btn btn-sm" id="btnModePincode" onclick="switchImportSearchMode('pincode')" style="flex: 1; background: var(--primary);">
+            <i class="fa-solid fa-location-dot"></i> Search by Specific Pincode
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnModeDistrict" onclick="switchImportSearchMode('district')" style="flex: 1;">
+            <i class="fa-solid fa-city"></i> Search Entire District (Bulk Fetch All Pincodes & Shops)
+          </button>
+        </div>
+
+        <!-- Pincode Search Section -->
+        <div id="sectionPincodeSearch" class="form-row" style="margin-bottom: 20px;">
           <div class="form-group">
-            <label>Pincode or City Location</label>
+            <label>Pincode or Local Area</label>
             <input type="text" id="importPincodeInput" class="form-control" placeholder="e.g. 682001 or Kochi" value="682001">
           </div>
           <div class="form-group">
@@ -718,6 +730,39 @@
             </select>
           </div>
         </div>
+
+        <!-- District Search Section (Hidden by default until switched) -->
+        <div id="sectionDistrictSearch" class="form-row" style="margin-bottom: 20px; display: none;">
+          <div class="form-group">
+            <label>State</label>
+            <select id="importStateSelect" class="form-control" disabled style="opacity: 0.9;">
+              <option value="Kerala" selected>Kerala (Default State)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Select Target District (Bulk All Pincodes & All Shops)</label>
+            <select id="importDistrictSelect" class="form-control">
+              <option value="Ernakulam" selected>Ernakulam / Kochi (All Pincodes & Regions)</option>
+              <option value="Thiruvananthapuram">Thiruvananthapuram (All Pincodes & Regions)</option>
+              <option value="Kozhikode">Kozhikode (All Pincodes & Regions)</option>
+              <option value="Thrissur">Thrissur (All Pincodes & Regions)</option>
+              <option value="Kottayam">Kottayam (All Pincodes & Regions)</option>
+              <option value="Kannur">Kannur (All Pincodes & Regions)</option>
+              <option value="Palakkad">Palakkad (All Pincodes & Regions)</option>
+              <option value="Kollam">Kollam (All Pincodes & Regions)</option>
+              <option value="Malappuram">Malappuram (All Pincodes & Regions)</option>
+              <option value="Alappuzha">Alappuzha (All Pincodes & Regions)</option>
+              <option value="Pathanamthitta">Pathanamthitta (All Pincodes & Regions)</option>
+              <option value="Idukki">Idukki (All Pincodes & Regions)</option>
+              <option value="Wayanad">Wayanad (All Pincodes & Regions)</option>
+              <option value="Kasaragod">Kasaragod (All Pincodes & Regions)</option>
+            </select>
+            <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+              <i class="fa-solid fa-circle-info"></i> Fetches all shops, stores, and businesses across all pincodes under the selected district in bulk without category filters.
+            </small>
+          </div>
+        </div>
+
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
           <button class="btn" onclick="executePlaceFetch()"><i class="fa-solid fa-cloud-arrow-down"></i> Search Google Places via SerpAPI</button>
           <button class="btn btn-secondary" id="btnImportAll" style="display: none;" onclick="importAllPlacesToDb()"><i class="fa-solid fa-layer-group"></i> Import All Search Results to MongoDB Atlas</button>
@@ -1297,29 +1342,67 @@
 
     // GOOGLE PLACE SEARCH & RICH A-TO-Z DATA IMPORT
     let currentFetchedPlaces = [];
+    let currentSearchMode = 'pincode';
+
+    function switchImportSearchMode(mode) {
+      currentSearchMode = mode;
+      const btnPincode = document.getElementById('btnModePincode');
+      const btnDistrict = document.getElementById('btnModeDistrict');
+      const secPincode = document.getElementById('sectionPincodeSearch');
+      const secDistrict = document.getElementById('sectionDistrictSearch');
+
+      if (mode === 'district') {
+        btnDistrict.style.background = 'var(--primary)';
+        btnDistrict.classList.remove('btn-secondary');
+        btnPincode.style.background = '';
+        btnPincode.classList.add('btn-secondary');
+        secPincode.style.display = 'none';
+        secDistrict.style.display = 'flex';
+      } else {
+        btnPincode.style.background = 'var(--primary)';
+        btnPincode.classList.remove('btn-secondary');
+        btnDistrict.style.background = '';
+        btnDistrict.classList.add('btn-secondary');
+        secDistrict.style.display = 'none';
+        secPincode.style.display = 'flex';
+      }
+    }
 
     async function executePlaceFetch() {
-      const pincode = document.getElementById('importPincodeInput').value;
-      const category = document.getElementById('importCategorySelect').value;
       const msgDiv = document.getElementById('importStatusMessage');
       const grid = document.getElementById('importResultsGrid');
       const bulkBtn = document.getElementById('btnImportAll');
 
-      msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching places & rich details via SerpAPI...</span>`;
       grid.innerHTML = '';
       bulkBtn.style.display = 'none';
+
+      let payload = {};
+      let targetLabel = '';
+
+      if (currentSearchMode === 'district') {
+        const district = document.getElementById('importDistrictSelect').value;
+        payload = { option: 'district', district };
+        targetLabel = `District "${district}" (All Pincodes & Regions)`;
+        msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching ALL shops & businesses across district "${district}" (all pincodes) via SerpAPI...</span>`;
+      } else {
+        const pincode = document.getElementById('importPincodeInput').value;
+        const category = document.getElementById('importCategorySelect').value;
+        payload = { option: 'category', pincode, category };
+        targetLabel = `Pincode ${pincode} (${category})`;
+        msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching places via SerpAPI for pincode ${pincode} (${category})...</span>`;
+      }
 
       try {
         const res = await fetch('/api/admin/fetch-directory', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ option: 'category', pincode, category })
+          body: JSON.stringify(payload)
         });
 
         const json = await res.json();
         if (res.ok && json.directory) {
           currentFetchedPlaces = json.directory;
-          msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Found ${json.directory.length} Google Places with rich details for pincode ${pincode} (${category}).</span>`;
+          msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Found ${json.directory.length} Google Places with rich details for ${targetLabel}.</span>`;
           bulkBtn.style.display = 'inline-flex';
           
           grid.innerHTML = json.directory.map((item, idx) => {
@@ -1335,7 +1418,7 @@
               <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" alt="place">
               <div class="import-card-body">
                 <div class="import-card-title">${item.name || 'Local Business'}</div>
-                <div class="import-card-sub"><i class="fa-solid fa-location-dot"></i> ${item.address || 'Kochi'}</div>
+                <div class="import-card-sub"><i class="fa-solid fa-location-dot"></i> ${item.address || 'Kochi'} (PIN: ${item.pincode || ''})</div>
                 
                 <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;">
                   <div><i class="fa-solid fa-phone" style="color: var(--success);"></i> <strong>Phone:</strong> ${item.phone || 'No phone'}</div>

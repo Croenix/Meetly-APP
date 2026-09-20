@@ -207,19 +207,10 @@ const defaultBanners = [
   }
 ];
 
-// --- KERALA PINCODES DATA ENGINE ---
-const KERALA_PINCODES = [
-  { pincode: '682001', city: 'Kochi (Fort Kochi / MG Road)' },
-  { pincode: '682002', city: 'Kochi (Mattancherry)' },
-  { pincode: '682011', city: 'Kochi (Kaloor)' },
-  { pincode: '682016', city: 'Kochi (Kadavanthra)' },
-  { pincode: '682020', city: 'Kochi (Vyttila)' },
-  { pincode: '682030', city: 'Kochi (Kakkanad)' },
-  { pincode: '682035', city: 'Kochi (Edappally)' },
-  { pincode: '683101', city: 'Aluva' },
-  { pincode: '673001', city: 'Kozhikode' },
-  { pincode: '695001', city: 'Thiruvananthapuram' },
-];
+// --- KERALA PINCODES & DISTRICTS DATA ENGINE ---
+const DISTRICTS_FILE = path.join(__dirname, 'kerala_districts.json');
+const KERALA_DISTRICTS = readJsonFile(DISTRICTS_FILE, {});
+const KERALA_PINCODES = Object.values(KERALA_DISTRICTS).flat();
 
 const DEFAULT_PINCODE_CATEGORIES = [
   'Electricians', 'Plumbers', 'Mechanics', 'Cleaners', 'Painters', 'Carpenters', 'Pest Control',
@@ -228,9 +219,42 @@ const DEFAULT_PINCODE_CATEGORIES = [
 ];
 
 /**
+ * Fetches all shops & businesses across all pincodes under a specific district in bulk.
+ */
+async function fetchDistrictPlacesData(apiKey, districtName, isSerp = true) {
+  const pinList = KERALA_DISTRICTS[districtName] || [{ pincode: '682001', city: districtName }];
+  const districtPincodesSet = new Set(pinList.map(p => p.pincode));
+  const allListings = [];
+
+  for (const pinObj of pinList) {
+    try {
+      const items = isSerp
+        ? await fetchSerpApiPlacesData(apiKey, pinObj.pincode, 'ALL', districtPincodesSet)
+        : await fetchGooglePlacesData(apiKey, pinObj.pincode, 'ALL');
+      allListings.push(...items);
+    } catch (err) {
+      console.warn(`[DistrictFetch] Error fetching pincode ${pinObj.pincode} in ${districtName}:`, err.message);
+    }
+  }
+
+  // Deduplicate in-memory by placeId or name + pincode
+  const uniqueMap = new Map();
+  for (const item of allListings) {
+    const key = item.placeId && item.placeId.trim()
+      ? `place_${item.placeId.trim()}`
+      : `name_${item.name.toLowerCase().trim()}_pin_${item.pincode.trim()}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  }
+
+  return Array.from(uniqueMap.values());
+}
+
+/**
  * Fetches Google Places / Google Maps listings via SerpAPI (google_maps engine).
  */
-async function fetchSerpApiPlacesData(apiKey, pincode, categoryFilter = null) {
+async function fetchSerpApiPlacesData(apiKey, pincode, categoryFilter = null, districtPincodesSet = null) {
   if (!apiKey || !apiKey.trim()) {
     throw new Error("SerpAPI Key is missing or unconfigured. Please configure your SerpAPI Key in API Settings.");
   }
@@ -256,10 +280,17 @@ async function fetchSerpApiPlacesData(apiKey, pincode, categoryFilter = null) {
       if (Array.isArray(data.local_results)) {
         for (const place of data.local_results) {
           const formattedAddress = place.address || place.description || '';
-
-          // Strict Pincode Validation
           const pinMatch = formattedAddress.match(/\b\d{6}\b/);
-          if (pinMatch && pinMatch[0] !== pincode) {
+          const itemPincode = pinMatch ? pinMatch[0] : pincode;
+
+          // Pincode Validation Filter
+          if (districtPincodesSet) {
+            // District Mode: Accept all pincodes belonging to the district or default
+            if (pinMatch && !districtPincodesSet.has(pinMatch[0])) {
+              // Skip only if pincode is explicitly outside target district
+              continue;
+            }
+          } else if (pinMatch && pinMatch[0] !== pincode) {
             console.log(`[Pincode Validation Filter] Discarding "${place.title}" (Address pincode ${pinMatch[0]} != target ${pincode})`);
             continue;
           }
@@ -1177,7 +1208,11 @@ app.post('/api/admin/fetch-directory', async (req, res) => {
       : (pin, cat) => fetchGooglePlacesData(googleApiKey, pin, cat);
     const sourceName = hasSerp ? 'SerpAPI Google Maps Engine' : 'Google Places API';
 
-    if (option === 'bulk') {
+    if (option === 'district') {
+      const targetDistrict = req.body.district || 'Ernakulam';
+      const items = await fetchDistrictPlacesData(hasSerp ? serpApiKey : googleApiKey, targetDistrict, hasSerp);
+      currentDirectory = items;
+    } else if (option === 'bulk') {
       let newItems = [];
       for (const p of KERALA_PINCODES) {
         const items = await fetchFunc(p.pincode);
