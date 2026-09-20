@@ -17,13 +17,34 @@ import '../../core/models/service_provider.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/services/analytics_service.dart';
 import '../../core/services/location_service.dart';
+import '../../core/models/business_listing.dart';
+import '../search/directory_search_screen.dart';
+import '../search/store_detail_screen.dart';
 import 'widgets/server_connected_avatar_widget.dart';
 
 // StateProvider to reactively store the user selected city location
 final selectedLocationProvider = StateProvider<String?>((ref) => null);
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _hasLoggedHomeView = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasLoggedHomeView && mounted) {
+        ref.read(analyticsServiceProvider).logScreenView('Home');
+        _hasLoggedHomeView = true;
+      }
+    });
+  }
 
   void _showLocationBottomSheet(
     BuildContext context,
@@ -283,11 +304,7 @@ class HomeScreen extends ConsumerWidget {
 }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(analyticsServiceProvider).logScreenView('Home');
-    });
-
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final providersAsync = ref.watch(providersListProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -872,6 +889,123 @@ class HomeScreen extends ConsumerWidget {
                         loading: () =>
                             const Center(child: CircularProgressIndicator()),
                         error: (e, _) => Text('Error loading providers: $e'),
+                      ),
+                      AppSpacing.height32,
+
+                      // 3.5 Nearby Businesses & Shops (From Server/MongoDB)
+                      Builder(
+                        builder: (context) {
+                          final userLoc = ref.watch(userLocationStateProvider);
+                          final textLoc = ref.watch(selectedLocationProvider);
+
+                          String activePin = userLoc?.pincode ?? '';
+                          if (activePin.isEmpty || activePin.length != 6) {
+                            activePin = extractPincodeFromAddress(textLoc) ?? '682001';
+                          }
+
+                          final homeStoresAsync = ref.watch(storeDirectoryProvider(StoreDirectoryQuery(
+                            pincode: activePin,
+                            category: 'All',
+                            search: '',
+                          )));
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Nearby Businesses & Shops',
+                                          style: textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'PIN $activePin • From Google',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => context.push('/search'),
+                                    child: const Text('View All'),
+                                  ),
+                                ],
+                              ),
+                              AppSpacing.height12,
+                              homeStoresAsync.when(
+                                data: (stores) {
+                                  if (stores.isEmpty) {
+                                    return Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? AppColors.surfaceDark : Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.storefront_outlined,
+                                            size: 36,
+                                            color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'No shops registered under PIN $activePin yet',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Tap View All to explore all stores across Kerala',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+
+                                  return ListView.separated(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: stores.length > 5 ? 5 : stores.length,
+                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                    itemBuilder: (context, index) {
+                                      return RealStoreCard(store: stores[index]);
+                                    },
+                                  );
+                                },
+                                loading: () => const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(20),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                                error: (e, _) => const SizedBox.shrink(),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       AppSpacing.height32,
 
@@ -1544,6 +1678,170 @@ class _BannersCarouselState extends ConsumerState<BannersCarousel> {
           ),
         ],
       ],
+    );
+  }
+}
+
+class RealStoreCard extends StatelessWidget {
+  final BusinessListing store;
+
+  const RealStoreCard({super.key, required this.store});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF6C5CE7);
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StoreDetailScreen(store: store),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.network(
+                  store.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, e, s) => Container(
+                    color: primaryColor.withValues(alpha: 0.2),
+                    child: Icon(Icons.storefront_rounded, size: 48, color: primaryColor),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                      stops: const [0.3, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: store.isOpenNow ? Colors.green.withValues(alpha: 0.9) : Colors.red.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    store.isOpenNow ? 'OPEN' : 'CLOSED',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'PIN ${store.pincode}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 14,
+                left: 14,
+                right: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      store.category.toUpperCase(),
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      store.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          store.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (store.reviewCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${store.reviewCount} reviews)',
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

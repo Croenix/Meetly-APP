@@ -4,6 +4,14 @@ import 'package:geocoding/geocoding.dart';
 
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
 
+final userLocationStateProvider = StateProvider<LocationDataResult?>((ref) => null);
+
+String? extractPincodeFromAddress(String? address) {
+  if (address == null || address.isEmpty) return null;
+  final match = RegExp(r'\b\d{6}\b').firstMatch(address);
+  return match?.group(0);
+}
+
 class LocationDataResult {
   final bool success;
   final String formattedAddress; // e.g. "Kakkanad, Kochi - 682030"

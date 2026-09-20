@@ -61,6 +61,7 @@ const BOOKINGS_FILE = path.join(__dirname, 'bookings.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const DIRECTORY_FILE = path.join(__dirname, 'business_directory.json');
 const API_KEYS_FILE = path.join(__dirname, 'api_keys.json');
+const ANALYTICS_EVENTS_FILE = path.join(__dirname, 'analytics_events.json');
 
 const defaultApiKeys = {
   serpApiKey: '',
@@ -972,25 +973,9 @@ wss.on('connection', (ws, req, tokenPayload) => {
 });
 
 // --- REST API ENDPOINTS ---
-app.get('/api/analytics/events', async (req, res) => {
-  try {
-    const url = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/analytics_events.json';
-    const response = await fetch(url);
-    if (response.ok) {
-      const data = await response.json();
-      if (data) {
-        const eventsList = Object.entries(data).map(([id, evt]) => ({
-          id,
-          ...evt
-        })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        return res.json(eventsList);
-      }
-    }
-    res.json([]);
-  } catch (err) {
-    console.error('Error fetching analytics events from Firebase RTDB:', err.message);
-    res.json([]);
-  }
+app.get('/api/analytics/events', (req, res) => {
+  const eventsList = readJsonFile(ANALYTICS_EVENTS_FILE, []);
+  res.json(eventsList);
 });
 
 app.get('/api/admin/telemetry', (req, res) => {
@@ -1025,10 +1010,26 @@ app.get('/api/analytics/categories', async (req, res) => {
 });
 
 app.post('/api/analytics/event', (req, res) => {
-  const { eventName, payload } = req.body;
-  if (!eventName) return res.status(400).json({ error: 'eventName is required' });
-  bigQueryService.recordSimulatedEvent(eventName, payload || {});
-  res.json({ success: true });
+  const { eventName, payload, name, parameters } = req.body;
+  const evtName = eventName || name;
+  if (!evtName) return res.status(400).json({ error: 'eventName is required' });
+
+  const evtPayload = payload || parameters || {};
+  bigQueryService.recordSimulatedEvent(evtName, evtPayload);
+
+  const currentEvents = readJsonFile(ANALYTICS_EVENTS_FILE, []);
+  const newEvent = {
+    id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    name: evtName,
+    parameters: evtPayload,
+    timestamp: evtPayload.timestamp || new Date().toISOString(),
+    platform: evtPayload.platform || 'App'
+  };
+  currentEvents.unshift(newEvent);
+  if (currentEvents.length > 500) currentEvents.length = 500;
+  writeJsonFile(ANALYTICS_EVENTS_FILE, currentEvents);
+
+  res.json({ success: true, event: newEvent });
 });
 
 app.get('/api/settings', (req, res) => {

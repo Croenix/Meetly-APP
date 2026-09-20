@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   /// Default server host configuration
   static const String defaultLocalhost = 'http://localhost:5000';
-  static const String defaultAndroidEmulatorHost = 'http://192.168.1.3:5000';
+  static const String defaultAndroidEmulatorHost = 'http://192.168.1.2:5000';
   static const int defaultPort = 5000;
 
   /// Cryptographic shared application secret for API handshakes

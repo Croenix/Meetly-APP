@@ -13,6 +13,28 @@ function escapeRegex(text) {
 }
 
 /**
+ * Get distinct pincodes and districts from database & dataset.
+ * GET /api/v1/stores/pincodes
+ */
+exports.getPincodes = asyncHandler(async (req, res) => {
+  try {
+    const dbPincodes = await Store.distinct('pincode');
+    const DISTRICTS_FILE = path.join(__dirname, '..', 'kerala_districts.json');
+    let districtsData = {};
+    if (fs.existsSync(DISTRICTS_FILE)) {
+      districtsData = JSON.parse(fs.readFileSync(DISTRICTS_FILE, 'utf8'));
+    }
+
+    return successResponse(res, 200, 'Pincodes retrieved successfully', {
+      dbPincodes: dbPincodes.filter(Boolean).sort(),
+      districts: districtsData,
+    });
+  } catch (err) {
+    return errorResponse(res, 500, 'Failed to fetch pincodes', err.message);
+  }
+});
+
+/**
  * Get all stores with optional filtering.
  * GET /api/v1/stores
  */

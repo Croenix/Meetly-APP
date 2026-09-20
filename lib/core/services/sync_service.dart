@@ -312,10 +312,15 @@ class SyncService {
     return AppSyncSettings.defaultOffline();
   }
 
+  static String? _cachedServerUrl;
+
   // Dynamic Service Discovery: Fetch backend server URL from Firebase RTDB node /server_url
   Future<String> fetchServerUrl() async {
+    if (_cachedServerUrl != null && _cachedServerUrl!.isNotEmpty) {
+      return _cachedServerUrl!;
+    }
     try {
-      final snapshot = await _database.ref('server_url').get().timeout(const Duration(seconds: 3));
+      final snapshot = await _database.ref('server_url').get().timeout(const Duration(seconds: 1));
       if (snapshot.exists && snapshot.value != null) {
         var url = snapshot.value.toString().trim();
         if (url.isNotEmpty) {
@@ -325,6 +330,7 @@ class SyncService {
           if (kDebugMode) {
             print("SyncService: Successfully retrieved dynamic server URL from Firebase RTDB: '$url'");
           }
+          _cachedServerUrl = url;
           return url;
         }
       }
@@ -333,6 +339,7 @@ class SyncService {
         print("SyncService: Failed to fetch server_url from Firebase RTDB ($e). Using AppConfig default.");
       }
     }
+    _cachedServerUrl = AppConfig.baseUrl;
     return AppConfig.baseUrl;
   }
 
@@ -367,19 +374,75 @@ class SyncService {
     return {'status': 'error', 'message': 'Failed to communicate with Node.js server'};
   }
 
-  // Fetch Business Directory - Node.js Backend Primary with Hive Storage Fallback
-  Future<List<BusinessListing>> fetchBusinessDirectory() async {
+  // Fetch dynamic available pincodes list from server
+  Future<List<String>> fetchServerPincodes() async {
     try {
       final serverUrl = await fetchServerUrl();
-      final uri = Uri.parse('$serverUrl/api/directory');
-      final res = await http.get(uri).timeout(const Duration(seconds: 3));
+      final uri = Uri.parse('$serverUrl/api/v1/stores/pincodes');
+      final res = await http.get(uri).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
-        final List<dynamic> raw = json.decode(res.body);
-        final list = raw.map((item) => Map<String, dynamic>.from(item as Map)).toList();
-        await HiveLocalDatabase.instance.saveMapList('business_directory', list);
-        return list.map((item) => BusinessListing.fromJson(item)).toList();
+        final decoded = json.decode(res.body);
+        if (decoded is Map<String, dynamic> && decoded['data'] != null) {
+          final data = decoded['data'];
+          if (data['dbPincodes'] is List) {
+            final List<String> list = (data['dbPincodes'] as List).map((e) => e.toString()).toList();
+            if (list.isNotEmpty) {
+              return list;
+            }
+          }
+        }
       }
     } catch (_) {}
+    return ['682001', '682002', '682011', '682016', '682020', '682030', '682035', '683101', '673001', '695001'];
+  }
+
+  // Fetch Business Directory - Node.js Backend Primary with Hive Storage Fallback
+  Future<List<BusinessListing>> fetchBusinessDirectory({
+    String? pincode,
+    String? category,
+    String? city,
+    String? search,
+  }) async {
+    try {
+      final serverUrl = await fetchServerUrl();
+      final queryParams = <String, String>{};
+      if (pincode != null && pincode.isNotEmpty && pincode != 'All') {
+        queryParams['pincode'] = pincode;
+      }
+      if (category != null && category.isNotEmpty && category != 'All') {
+        queryParams['category'] = category;
+      }
+      if (city != null && city.isNotEmpty && city != 'All') {
+        queryParams['city'] = city;
+      }
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
+
+      final baseUrl = Uri.parse('$serverUrl/api/v1/stores');
+      final uri = queryParams.isNotEmpty ? baseUrl.replace(queryParameters: queryParams) : baseUrl;
+      
+      final res = await http.get(uri).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final decoded = json.decode(res.body);
+        List<dynamic> raw = [];
+        if (decoded is Map<String, dynamic> && decoded['data'] is List) {
+          raw = decoded['data'];
+        } else if (decoded is List) {
+          raw = decoded;
+        }
+
+        if (raw.isNotEmpty) {
+          final list = raw.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+          await HiveLocalDatabase.instance.saveMapList('business_directory', list);
+          return list.map((item) => BusinessListing.fromJson(item)).toList();
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("SyncService: Failed to fetch stores from Node.js server ($e). Loading cached shops...");
+      }
+    }
 
     // Offline Hive Fallback
     final cached = await HiveLocalDatabase.instance.getMapList('business_directory');
@@ -390,3 +453,4 @@ class SyncService {
     return [BusinessListing.fallback()];
   }
 }
+

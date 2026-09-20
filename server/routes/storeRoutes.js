@@ -8,9 +8,11 @@ const {
   deduplicateStores,
   updateStore,
   deleteStore,
+  getPincodes,
 } = require('../controllers/storeController');
 
 // Bulk import & deduplication cleanup routes
+router.get('/pincodes', getPincodes);
 router.post('/bulk', bulkCreateStores);
 router.post('/deduplicate', deduplicateStores);
 

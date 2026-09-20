@@ -1,8 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import '../services/sync_service.dart';
 
 // Riverpod Provider for AnalyticsService
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
@@ -12,23 +13,25 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
 class AnalyticsService {
   final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
-  FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app',
-      );
-
-  Future<void> _syncEventToFirebaseDatabase(String name, Map<String, dynamic> params) async {
+  Future<void> _syncEventToServer(String name, Map<String, dynamic> params) async {
     try {
-      final eventId = 'evt_${DateTime.now().millisecondsSinceEpoch}';
-      await _database.ref('analytics_events/$eventId').set({
-        'name': name,
-        'parameters': params,
-        'timestamp': DateTime.now().toIso8601String(),
-        'platform': kIsWeb ? 'Web' : defaultTargetPlatform.name,
-      });
+      final serverUrl = await SyncService().fetchServerUrl();
+      final uri = Uri.parse('$serverUrl/api/analytics/event');
+      await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'eventName': name,
+          'payload': {
+            ...params,
+            'timestamp': DateTime.now().toIso8601String(),
+            'platform': kIsWeb ? 'Web' : defaultTargetPlatform.name,
+          },
+        }),
+      ).timeout(const Duration(seconds: 2));
     } catch (e) {
       if (kDebugMode) {
-        print("AnalyticsService: Error syncing event to Firebase RTDB ($e)");
+        print("AnalyticsService: Server telemetry sync offline/ignored ($e)");
       }
     }
   }
@@ -37,7 +40,7 @@ class AnalyticsService {
   Future<void> logAppOpen() async {
     try {
       await _analytics.logAppOpen();
-      await _syncEventToFirebaseDatabase('app_open', {'event': 'app_open'});
+      await _syncEventToServer('app_open', {'event': 'app_open'});
       if (kDebugMode) {
         print("AnalyticsService: Logged App Open");
       }
@@ -58,7 +61,7 @@ class AnalyticsService {
           'screen_class': screenName,
         },
       );
-      await _syncEventToFirebaseDatabase('screen_view', {
+      await _syncEventToServer('screen_view', {
         'screen_name': screenName,
       });
       if (kDebugMode) {
@@ -75,7 +78,7 @@ class AnalyticsService {
   Future<void> logSearch(String query) async {
     try {
       await _analytics.logSearch(searchTerm: query);
-      await _syncEventToFirebaseDatabase('search', {
+      await _syncEventToServer('search', {
         'query': query,
       });
       if (kDebugMode) {
@@ -97,7 +100,7 @@ class AnalyticsService {
           'category_name': categoryName,
         },
       );
-      await _syncEventToFirebaseDatabase('category_click', {
+      await _syncEventToServer('category_click', {
         'category_name': categoryName,
       });
       if (kDebugMode) {
@@ -120,7 +123,7 @@ class AnalyticsService {
           'category': category,
         },
       );
-      await _syncEventToFirebaseDatabase('booking_attempt', {
+      await _syncEventToServer('booking_attempt', {
         'provider_id': providerId,
         'category': category,
       });
@@ -144,7 +147,7 @@ class AnalyticsService {
           'promo_title': promoTitle,
         },
       );
-      await _syncEventToFirebaseDatabase('banner_click', {
+      await _syncEventToServer('banner_click', {
         'banner_id': bannerId,
         'promo_title': promoTitle,
       });
