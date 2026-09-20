@@ -410,6 +410,9 @@ function readJsonFile(filePath, fallback) {
       return fallback;
     }
     const data = fs.readFileSync(filePath, 'utf8');
+    if (!data || !data.trim()) {
+      return fallback;
+    }
     return JSON.parse(data);
   } catch (err) {
     return fallback;
@@ -669,7 +672,7 @@ function broadcastAnalytics() {
 }
 
 function broadcastConfigUpdate(changeType, payloadData) {
-  const directory = readJsonFile(DIRECTORY_FILE, generatePincodeBusinesses('682001'));
+  const directory = readJsonFile(DIRECTORY_FILE, []);
   const msg = JSON.stringify({
     type: 'CONFIG_UPDATE',
     changeType: changeType,

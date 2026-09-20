@@ -49,10 +49,20 @@ class BigQueryService {
       const providersFile = path.join(__dirname, 'providers.json');
       const categoriesFile = path.join(__dirname, 'categories.json');
 
-      const users = fs.existsSync(usersFile) ? JSON.parse(fs.readFileSync(usersFile, 'utf8')) : [];
-      const bookings = fs.existsSync(bookingsFile) ? JSON.parse(fs.readFileSync(bookingsFile, 'utf8')) : [];
-      const providers = fs.existsSync(providersFile) ? JSON.parse(fs.readFileSync(providersFile, 'utf8')) : [];
-      const categories = fs.existsSync(categoriesFile) ? JSON.parse(fs.readFileSync(categoriesFile, 'utf8')) : [];
+      const safeReadJson = (p) => {
+        try {
+          if (!fs.existsSync(p)) return [];
+          const content = fs.readFileSync(p, 'utf8');
+          return content && content.trim() ? JSON.parse(content) : [];
+        } catch (_) {
+          return [];
+        }
+      };
+
+      const users = safeReadJson(usersFile);
+      const bookings = safeReadJson(bookingsFile);
+      const providers = safeReadJson(providersFile);
+      const categories = safeReadJson(categoriesFile);
       const realEvents = await this._fetchRealFirebaseEvents();
 
       const totalUsers = users.length;
