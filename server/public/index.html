@@ -628,6 +628,7 @@
           <div class="panel-title"><i class="fa-solid fa-store" style="color: var(--secondary);"></i> Store & Business Directory (MongoDB Atlas)</div>
           <div class="panel-actions">
             <input type="text" id="storeSearchInput" class="search-input" placeholder="Search stores..." onkeyup="filterStoresTable()">
+            <button class="btn btn-secondary" onclick="purgeDuplicateStores()"><i class="fa-solid fa-broom"></i> Purge Duplicates</button>
             <button class="btn" onclick="openAddStoreModal()"><i class="fa-solid fa-plus"></i> Add New Store</button>
           </div>
         </div>
@@ -693,7 +694,7 @@
     <div id="tab-import" class="tab-content">
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fa-solid fa-magnifying-glass-location" style="color: var(--primary);"></i> Google Places Search & Import</div>
+          <div class="panel-title"><i class="fa-solid fa-magnifying-glass-location" style="color: var(--primary);"></i> Google Places Search & Import (SerpAPI Engine)</div>
         </div>
         <div class="form-row" style="margin-bottom: 20px;">
           <div class="form-group">
@@ -703,15 +704,24 @@
           <div class="form-group">
             <label>Business Category Filter</label>
             <select id="importCategorySelect" class="form-control">
+              <option value="ALL" selected>🌟 ALL Categories (Fetch Everything in Pincode)</option>
               <option value="Electrical">Electrical & Rewiring</option>
               <option value="Plumbing">Plumbing Services</option>
               <option value="Cleaning">House Cleaning</option>
-              <option value="Appliance">Appliance Repair</option>
-              <option value="General">General Stores</option>
+              <option value="Stores">General Stores & Supermarkets</option>
+              <option value="Hardware">Hardware & Tools</option>
+              <option value="Electronics">Electronics Stores</option>
+              <option value="Hotels">Hotels & Lodging</option>
+              <option value="Restaurants">Restaurants & Cafes</option>
+              <option value="Hospitals">Hospitals & Clinics</option>
+              <option value="Salons">Salons & Spas</option>
             </select>
           </div>
         </div>
-        <button class="btn" onclick="executePlaceFetch()"><i class="fa-solid fa-cloud-arrow-down"></i> Search Google Places API</button>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn" onclick="executePlaceFetch()"><i class="fa-solid fa-cloud-arrow-down"></i> Search Google Places via SerpAPI</button>
+          <button class="btn btn-secondary" id="btnImportAll" style="display: none;" onclick="importAllPlacesToDb()"><i class="fa-solid fa-layer-group"></i> Import All Search Results to MongoDB Atlas</button>
+        </div>
 
         <div id="importStatusMessage" style="margin-top: 16px; font-size: 14px;"></div>
         <div class="import-grid" id="importResultsGrid"></div>
@@ -722,15 +732,19 @@
     <div id="tab-settings" class="tab-content">
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fa-solid fa-key" style="color: var(--warning);"></i> Google API Key Settings</div>
+          <div class="panel-title"><i class="fa-solid fa-key" style="color: var(--warning);"></i> API Settings & Keys</div>
         </div>
         <form id="apiKeysForm" onsubmit="saveApiKeys(event)">
           <div class="form-group">
-            <label>Google Maps Places API Key *</label>
-            <input type="password" id="googleMapsApiKey" class="form-control" placeholder="AIzaSy..." required>
-            <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">Used for querying real-world places, photos, coordinates, and reviews via Google Places API.</small>
+            <label>SerpAPI Key (Primary Google Places Engine) *</label>
+            <input type="password" id="serpApiKey" class="form-control" placeholder="Enter your SerpAPI key...">
+            <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">Used for scraping & fetching Google Places / Google Maps listings, ratings, reviews, and coordinates via SerpAPI.</small>
           </div>
-          <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Google API Key</button>
+          <div class="form-group" style="margin-top: 16px;">
+            <label>Google Maps Places API Key (Secondary Fallback)</label>
+            <input type="password" id="googleMapsApiKey" class="form-control" placeholder="AIzaSy...">
+          </div>
+          <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save API Keys</button>
         </form>
       </div>
     </div>
@@ -1173,15 +1187,19 @@
       if (res.ok) loadProviders();
     }
 
-    // GOOGLE PLACE SEARCH & 1-CLICK IMPORT
+    // GOOGLE PLACE SEARCH & RICH A-TO-Z DATA IMPORT
+    let currentFetchedPlaces = [];
+
     async function executePlaceFetch() {
       const pincode = document.getElementById('importPincodeInput').value;
       const category = document.getElementById('importCategorySelect').value;
       const msgDiv = document.getElementById('importStatusMessage');
       const grid = document.getElementById('importResultsGrid');
+      const bulkBtn = document.getElementById('btnImportAll');
 
-      msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching places from API...</span>`;
+      msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Fetching places & rich details via SerpAPI...</span>`;
       grid.innerHTML = '';
+      bulkBtn.style.display = 'none';
 
       try {
         const res = await fetch('/api/admin/fetch-directory', {
@@ -1192,17 +1210,23 @@
 
         const json = await res.json();
         if (res.ok && json.directory) {
-          msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Found ${json.directory.length} places for pincode ${pincode} (${category}).</span>`;
+          currentFetchedPlaces = json.directory;
+          msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Found ${json.directory.length} Google Places with rich details for pincode ${pincode} (${category}).</span>`;
+          bulkBtn.style.display = 'inline-flex';
           
           grid.innerHTML = json.directory.map((item, idx) => `
             <div class="import-card">
               <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'}" alt="place">
               <div class="import-card-body">
                 <div class="import-card-title">${item.name || 'Local Business'}</div>
-                <div class="import-card-sub"><i class="fa-solid fa-location-dot"></i> ${item.address || 'Kochi'} | ${item.phone || ''}</div>
+                <div class="import-card-sub"><i class="fa-solid fa-location-dot"></i> ${item.address || 'Kochi'}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                  <div><i class="fa-solid fa-phone"></i> ${item.phone || 'No phone'}</div>
+                  ${item.websiteUrl ? `<div><i class="fa-solid fa-globe"></i> <a href="${item.websiteUrl}" target="_blank" style="color: var(--secondary);">${item.websiteUrl}</a></div>` : ''}
+                </div>
                 <div class="import-card-footer">
-                  <span><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${item.rating || 4.5}</span>
-                  <button class="btn btn-sm" onclick='importPlaceToDb(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                  <span><i class="fa-solid fa-star" style="color: var(--warning);"></i> ${item.rating || 4.5} (${item.reviewCount || 10} reviews)</span>
+                  <button class="btn btn-sm" onclick="importSinglePlaceToDb(${idx})">
                     <i class="fa-solid fa-cloud-arrow-down"></i> Import to MongoDB
                   </button>
                 </div>
@@ -1217,27 +1241,19 @@
       }
     }
 
-    async function importPlaceToDb(item) {
-      try {
-        const payload = {
-          name: item.name,
-          category: item.category || 'General',
-          pincode: item.pincode || '682001',
-          address: item.address || 'Kochi, Kerala',
-          phone: item.phone || '+91 9847000000',
-          city: item.city || 'Kochi',
-          rating: item.rating || 4.5,
-          imageUrl: item.imageUrl || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
-        };
+    async function importSinglePlaceToDb(index) {
+      const item = currentFetchedPlaces[index];
+      if (!item) return;
 
+      try {
         const res = await fetch('/api/v1/stores', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(item)
         });
 
         if (res.ok) {
-          alert(`Successfully imported "${item.name}" into MongoDB Atlas Stores!`);
+          alert(`Successfully imported "${item.name}" with full A-to-Z details into MongoDB Atlas!`);
           loadStores();
         } else {
           alert("Import failed.");
@@ -1247,12 +1263,62 @@
       }
     }
 
+    async function importAllPlacesToDb() {
+      if (!currentFetchedPlaces || currentFetchedPlaces.length === 0) {
+        alert("No search results available to import.");
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to bulk import all ${currentFetchedPlaces.length} stores to MongoDB Atlas at once?`)) {
+        return;
+      }
+
+      const msgDiv = document.getElementById('importStatusMessage');
+      msgDiv.innerHTML = `<span style="color: var(--secondary);"><i class="fa-solid fa-spinner fa-spin"></i> Bulk uploading ${currentFetchedPlaces.length} stores to MongoDB Atlas...</span>`;
+
+      try {
+        const res = await fetch('/api/v1/stores/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stores: currentFetchedPlaces })
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+          msgDiv.innerHTML = `<span style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> Bulk Upload Successful! Persisted ${json.meta ? json.meta.count : currentFetchedPlaces.length} stores into MongoDB Atlas.</span>`;
+          alert(`Successfully bulk imported ${json.meta ? json.meta.count : currentFetchedPlaces.length} stores with full A-to-Z details into MongoDB Atlas!`);
+          loadStores();
+        } else {
+          msgDiv.innerHTML = `<span style="color: var(--error);">Bulk import failed: ${json.message}</span>`;
+        }
+      } catch (err) {
+        msgDiv.innerHTML = `<span style="color: var(--error);">Bulk import error: ${err.message}</span>`;
+      }
+    }
+
+    async function purgeDuplicateStores() {
+      if (!confirm("Are you sure you want to clean up and purge duplicate store entries from MongoDB Atlas?")) return;
+      try {
+        const res = await fetch('/api/v1/stores/deduplicate', { method: 'POST' });
+        const json = await res.json();
+        if (res.ok) {
+          alert(`Deduplication scan completed! Removed ${json.removedCount || 0} duplicate store(s). Total unique stores remaining: ${json.remainingCount || 0}.`);
+          loadStores();
+        } else {
+          alert("Failed to purge duplicates: " + (json.message || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Error purging duplicates: " + err.message);
+      }
+    }
+
     // API KEYS MANAGEMENT
     async function loadApiKeys() {
       try {
         const res = await fetch('/api/admin/api-keys');
         if (res.ok) {
           const keys = await res.json();
+          document.getElementById('serpApiKey').value = keys.serpApiKey || '';
           document.getElementById('googleMapsApiKey').value = keys.googleMapsApiKey || '';
         }
       } catch (err) {
@@ -1263,6 +1329,7 @@
     async function saveApiKeys(e) {
       e.preventDefault();
       const payload = {
+        serpApiKey: document.getElementById('serpApiKey').value,
         googleMapsApiKey: document.getElementById('googleMapsApiKey').value,
       };
 
@@ -1273,9 +1340,9 @@
       });
 
       if (res.ok) {
-        alert("Google Places API key saved successfully!");
+        alert("API keys saved successfully!");
       } else {
-        alert("Failed to save Google API key.");
+        alert("Failed to save API keys.");
       }
     }
   </script>

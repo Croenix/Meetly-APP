@@ -63,8 +63,7 @@ const DIRECTORY_FILE = path.join(__dirname, 'business_directory.json');
 const API_KEYS_FILE = path.join(__dirname, 'api_keys.json');
 
 const defaultApiKeys = {
-  mapmyindiaClientId: '',
-  mapmyindiaClientSecret: '',
+  serpApiKey: '',
   googleMapsApiKey: '',
   customScrapingApiKey: '',
   updatedAt: new Date().toISOString()
@@ -81,7 +80,8 @@ const FIREBASE_PROVIDERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast
 const FIREBASE_USERS_URL = 'https://meetly-fea92-default-rtdb.asia-southeast1.firebasedatabase.app/users.json';
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- MODULAR BACKEND API ROUTES ---
@@ -222,8 +222,83 @@ const KERALA_PINCODES = [
 ];
 
 const DEFAULT_PINCODE_CATEGORIES = [
-  'Electricians', 'Plumbers', 'Mechanics', 'Schools', 'Hospitals', 'Cleaners', 'Painters', 'Carpenters', 'Tutors'
+  'Electricians', 'Plumbers', 'Mechanics', 'Cleaners', 'Painters', 'Carpenters', 'Pest Control',
+  'Stores', 'Supermarkets', 'Electronics', 'Hardware', 'Pharmacies',
+  'Hotels', 'Restaurants', 'Cafes', 'Hospitals', 'Clinics', 'Salons', 'Schools', 'Tutors'
 ];
+
+/**
+ * Fetches Google Places / Google Maps listings via SerpAPI (google_maps engine).
+ */
+async function fetchSerpApiPlacesData(apiKey, pincode, categoryFilter = null) {
+  if (!apiKey || !apiKey.trim()) {
+    throw new Error("SerpAPI Key is missing or unconfigured. Please configure your SerpAPI Key in API Settings.");
+  }
+
+  const cleanKey = apiKey.trim();
+  const pinObj = KERALA_PINCODES.find(p => p.pincode === pincode) || { pincode, city: `Kerala ${pincode}` };
+  const isAll = !categoryFilter || categoryFilter.toUpperCase() === 'ALL';
+  const categoriesToFetch = isAll ? DEFAULT_PINCODE_CATEGORIES : [categoryFilter];
+  const listings = [];
+
+  for (const cat of categoriesToFetch) {
+    const query = `${cat} in ${pincode} ${pinObj.city} Kerala India`;
+    const searchUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(query)}&api_key=${cleanKey}`;
+
+    try {
+      const response = await fetch(searchUrl);
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(`SerpAPI error: ${data.error}`);
+      }
+
+      if (Array.isArray(data.local_results)) {
+        for (const place of data.local_results) {
+          const formattedAddress = place.address || place.description || '';
+
+          // Strict Pincode Validation
+          const pinMatch = formattedAddress.match(/\b\d{6}\b/);
+          if (pinMatch && pinMatch[0] !== pincode) {
+            console.log(`[Pincode Validation Filter] Discarding "${place.title}" (Address pincode ${pinMatch[0]} != target ${pincode})`);
+            continue;
+          }
+
+          const lat = place.gps_coordinates ? place.gps_coordinates.latitude : 9.9312;
+          const lng = place.gps_coordinates ? place.gps_coordinates.longitude : 76.2673;
+
+          listings.push({
+            id: place.place_id || place.data_id || `serp_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            placeId: place.place_id || '',
+            name: place.title || `${cat} Services`,
+            category: cat,
+            secondaryCategories: [place.type || cat, 'Local Business'],
+            phone: place.phone || 'Contact via Google Maps',
+            address: formattedAddress || `${pinObj.city}, PIN - ${pincode}`,
+            pincode: pincode,
+            city: pinObj.city,
+            latitude: lat,
+            longitude: lng,
+            rating: place.rating || 4.5,
+            reviewCount: place.reviews || 10,
+            imageUrl: place.thumbnail || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500',
+            images: place.thumbnail ? [place.thumbnail] : ['https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500'],
+            workingHours: place.operating_hours ? 'Open Now' : '08:00 AM - 08:00 PM',
+            isOpenNow: place.open_state ? place.open_state.toLowerCase().includes('open') : true,
+            websiteUrl: place.website || place.link || `https://maps.google.com/?q=${encodeURIComponent(place.title || cat)}`,
+            mapUrl: place.link || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (err) {
+      if (err.message.includes('SerpAPI error')) throw err;
+      console.warn(`[SerpApiEngine] Query exception for ${cat} in ${pincode}:`, err.message);
+    }
+  }
+
+  return listings;
+}
 
 async function fetchGooglePlacesData(apiKey, pincode, categoryFilter = null) {
   if (!apiKey || !apiKey.trim()) {
@@ -232,7 +307,8 @@ async function fetchGooglePlacesData(apiKey, pincode, categoryFilter = null) {
 
   const cleanKey = apiKey.trim();
   const pinObj = KERALA_PINCODES.find(p => p.pincode === pincode) || { pincode, city: `Kerala ${pincode}` };
-  const categoriesToFetch = categoryFilter ? [categoryFilter] : DEFAULT_PINCODE_CATEGORIES;
+  const isAll = !categoryFilter || categoryFilter.toUpperCase() === 'ALL';
+  const categoriesToFetch = isAll ? DEFAULT_PINCODE_CATEGORIES : [categoryFilter];
   const listings = [];
 
   for (const cat of categoriesToFetch) {
@@ -827,6 +903,10 @@ app.get('/api/analytics/events', async (req, res) => {
   }
 });
 
+app.get('/api/admin/telemetry', (req, res) => {
+  res.json(computeAnalytics());
+});
+
 app.get('/api/analytics/realtime', (req, res) => {
   res.json(computeAnalytics());
 });
@@ -948,12 +1028,11 @@ app.get('/api/admin/api-keys', (req, res) => {
 });
 
 app.post('/api/admin/api-keys', (req, res) => {
-  const { mapmyindiaClientId, mapmyindiaClientSecret, googleMapsApiKey, customScrapingApiKey } = req.body;
+  const { serpApiKey, googleMapsApiKey, customScrapingApiKey } = req.body;
   const current = readJsonFile(API_KEYS_FILE, defaultApiKeys);
   const updated = {
     ...current,
-    mapmyindiaClientId: mapmyindiaClientId !== undefined ? mapmyindiaClientId.trim() : current.mapmyindiaClientId,
-    mapmyindiaClientSecret: mapmyindiaClientSecret !== undefined ? mapmyindiaClientSecret.trim() : current.mapmyindiaClientSecret,
+    serpApiKey: serpApiKey !== undefined ? serpApiKey.trim() : (current.serpApiKey || ''),
     googleMapsApiKey: googleMapsApiKey !== undefined ? googleMapsApiKey.trim() : current.googleMapsApiKey,
     customScrapingApiKey: customScrapingApiKey !== undefined ? customScrapingApiKey.trim() : current.customScrapingApiKey,
     updatedAt: new Date().toISOString()
@@ -1018,22 +1097,26 @@ app.get('/api/directory', (req, res) => {
 app.post('/api/admin/fetch-directory', async (req, res) => {
   const { option, pincode, category } = req.body;
   const apiKeys = readJsonFile(API_KEYS_FILE, defaultApiKeys);
+  const serpApiKey = process.env.SERP_API_KEY || apiKeys.serpApiKey;
   const googleApiKey = apiKeys.googleMapsApiKey;
 
+  const hasSerp = serpApiKey && serpApiKey.trim().length > 0;
   const hasGoogle = googleApiKey && googleApiKey.trim().length > 0;
 
-  if (!hasGoogle) {
+  if (!hasSerp && !hasGoogle) {
     return res.status(400).json({
       status: 'error',
-      message: 'Google Maps API Key is missing. Please enter and save your Google Maps Places API key in the "API Settings & Keys" section.'
+      message: 'SerpAPI Key is missing. Please enter and save your SerpAPI Key in the "API Settings & Keys" section.'
     });
   }
 
   let currentDirectory = readJsonFile(DIRECTORY_FILE, []);
 
   try {
-    const fetchFunc = (pin, cat) => fetchGooglePlacesData(googleApiKey, pin, cat);
-    const sourceName = 'Google Places API';
+    const fetchFunc = hasSerp
+      ? (pin, cat) => fetchSerpApiPlacesData(serpApiKey, pin, cat)
+      : (pin, cat) => fetchGooglePlacesData(googleApiKey, pin, cat);
+    const sourceName = hasSerp ? 'SerpAPI Google Maps Engine' : 'Google Places API';
 
     if (option === 'bulk') {
       let newItems = [];
@@ -1044,11 +1127,17 @@ app.post('/api/admin/fetch-directory', async (req, res) => {
       currentDirectory = newItems;
     } else if (option === 'single' && pincode) {
       const items = await fetchFunc(pincode);
-      const existingFiltered = currentDirectory.filter(b => b.pincode !== pincode);
+      const existingFiltered = currentDirectory.filter(b => b && b.pincode !== pincode);
       currentDirectory = [...items, ...existingFiltered];
     } else if (option === 'category' && pincode && category) {
       const items = await fetchFunc(pincode, category);
-      const existingFiltered = currentDirectory.filter(b => !(b.pincode === pincode && b.category.toLowerCase() === category.toLowerCase()));
+      const isAllCat = category.toUpperCase() === 'ALL';
+      const existingFiltered = currentDirectory.filter(b => {
+        if (!b) return false;
+        if (isAllCat) return b.pincode !== pincode;
+        const bCat = b.category ? b.category.toLowerCase() : '';
+        return !(b.pincode === pincode && bCat === category.toLowerCase());
+      });
       currentDirectory = [...items, ...existingFiltered];
     }
 

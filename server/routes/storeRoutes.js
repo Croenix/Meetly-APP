@@ -4,9 +4,15 @@ const {
   getAllStores,
   getStoreById,
   createStore,
+  bulkCreateStores,
+  deduplicateStores,
   updateStore,
   deleteStore,
 } = require('../controllers/storeController');
+
+// Bulk import & deduplication cleanup routes
+router.post('/bulk', bulkCreateStores);
+router.post('/deduplicate', deduplicateStores);
 
 // Store routes
 router.route('/')
