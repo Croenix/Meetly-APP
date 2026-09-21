@@ -1332,13 +1332,17 @@ server.listen(PORT, async () => {
   const networkIp = getLocalNetworkIp();
   console.log(`Meetly Server & WebSocket running on http://localhost:${PORT} (Network: http://${networkIp}:${PORT})`);
   
-  // Publish Dynamic Server IP to Firebase RTDB Discovery Layer (/server_url & /ws_url)
-  const serverHttpUrl = `http://${networkIp}:${PORT}`;
-  const serverWsUrl = `ws://${networkIp}:${PORT}`;
+  // Publish Dynamic Server IP to Firebase RTDB Discovery Layer (/server_url & /ws_url) only if explicitly enabled
+  if (process.env.SYNC_LOCAL_IP === 'true') {
+    const serverHttpUrl = `http://${networkIp}:${PORT}`;
+    const serverWsUrl = `ws://${networkIp}:${PORT}`;
 
-  console.log(`Publishing dynamic server IP (${serverHttpUrl}) and WebSocket URL (${serverWsUrl}) to Firebase Realtime Database...`);
-  await syncToFirebase(FIREBASE_SERVER_URL, serverHttpUrl);
-  await syncToFirebase(FIREBASE_WS_URL, serverWsUrl);
+    console.log(`Publishing dynamic server IP (${serverHttpUrl}) and WebSocket URL (${serverWsUrl}) to Firebase Realtime Database...`);
+    await syncToFirebase(FIREBASE_SERVER_URL, serverHttpUrl);
+    await syncToFirebase(FIREBASE_WS_URL, serverWsUrl);
+  } else {
+    console.log("Skipping dynamic local IP sync to Firebase RTDB (using active production server URL).");
+  }
 
   console.log("Syncing baseline databases to Firebase RTDB nodes...");
   await syncToFirebase(FIREBASE_SETTINGS_URL, readJsonFile(SETTINGS_FILE, defaultSettings));

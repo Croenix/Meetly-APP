@@ -1,9 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 /// Central application configuration for server URLs, ports, and API endpoints.
 /// Easily change the server URL by updating [customServerUrl] or calling [setCustomServerUrl].
 class AppConfig {
   /// Default server host configuration
+  static const String defaultProductionHost =
+      'https://meetly-server-31wx.onrender.com';
   static const String defaultLocalhost = 'http://localhost:5000';
   static const String defaultAndroidEmulatorHost = 'http://192.168.1.2:5000';
   static const int defaultPort = 5000;
@@ -28,12 +28,7 @@ class AppConfig {
       return _customServerUrl;
     }
 
-    // Android emulator cannot access 127.0.0.1 directly; route to 10.0.2.2
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return defaultAndroidEmulatorHost;
-    }
-
-    return defaultLocalhost;
+    return defaultProductionHost;
   }
 
   /// Base WebSocket URL auto-converting HTTP scheme to WS scheme

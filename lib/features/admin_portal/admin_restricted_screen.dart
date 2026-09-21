@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
+import '../../core/config/app_config.dart';
 import '../../data/repositories/auth_repository.dart';
 
 class AdminRestrictedScreen extends ConsumerWidget {
@@ -70,7 +71,7 @@ class AdminRestrictedScreen extends ConsumerWidget {
                       .slideY(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutQuad),
                   AppSpacing.height12,
                   Text(
-                    'The Admin Control Panel is hosted strictly on the Node.js Web Server Console.\n\nPlease open a desktop web browser and navigate to http://localhost:5000 to manage live system analytics, categories, and promotions.',
+                    'The Admin Control Panel is hosted on the Node.js Web Server Console.\n\nPlease open a web browser and navigate to ${AppConfig.baseUrl} to manage live system analytics, categories, and promotions.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           height: 1.5,
                           fontSize: 13,
@@ -91,14 +92,14 @@ class AdminRestrictedScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFF6C5CE7).withValues(alpha: 0.3)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.language_rounded, size: 18, color: Color(0xFF6C5CE7)),
-                        SizedBox(width: 8),
+                        const Icon(Icons.language_rounded, size: 18, color: Color(0xFF6C5CE7)),
+                        const SizedBox(width: 8),
                         SelectableText(
-                          'http://localhost:5000',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF6C5CE7)),
+                          AppConfig.baseUrl,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF6C5CE7)),
                         ),
                       ],
                     ),
