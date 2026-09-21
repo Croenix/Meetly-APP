@@ -22,9 +22,6 @@ import '../search/directory_search_screen.dart';
 import '../search/store_detail_screen.dart';
 import 'widgets/server_connected_avatar_widget.dart';
 
-// StateProvider to reactively store the user selected city location
-final selectedLocationProvider = StateProvider<String?>((ref) => null);
-
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -109,8 +106,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 isFetchingGps = false;
                               });
 
-                              ref.read(selectedLocationProvider.notifier).state =
-                                  result.formattedAddress;
+                              ref
+                                  .read(selectedLocationProvider.notifier)
+                                  .setLocation(result.formattedAddress);
 
                               if (context.mounted) {
                                 Navigator.pop(context);
@@ -239,8 +237,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                       return InkWell(
                         onTap: () {
-                          ref.read(selectedLocationProvider.notifier).state =
-                              city;
+                          ref
+                              .read(selectedLocationProvider.notifier)
+                              .setLocation(city);
                           Navigator.pop(context);
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -892,7 +891,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       AppSpacing.height32,
 
-                      // 3.5 Nearby Businesses & Shops (From Server/MongoDB)
+                      // 3.5 Nearby Businesses & Shops (Filtered strictly by Pincode)
                       Builder(
                         builder: (context) {
                           final userLoc = ref.watch(userLocationStateProvider);
@@ -927,7 +926,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'PIN $activePin • From Google',
+                                          'PIN $activePin • Local Directory',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -946,7 +945,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               AppSpacing.height12,
                               homeStoresAsync.when(
                                 data: (stores) {
-                                  if (stores.isEmpty) {
+                                  // Filter strictly for stores matching user's active pincode
+                                  final nearbyStores = stores
+                                      .where((s) => s.pincode == activePin || activePin.isEmpty)
+                                      .toList();
+
+                                  if (nearbyStores.isEmpty) {
                                     return Container(
                                       width: double.infinity,
                                       padding: const EdgeInsets.all(20),
@@ -974,7 +978,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Tap View All to explore all stores across Kerala',
+                                            'Explore all businesses across Kerala below',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -985,13 +989,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     );
                                   }
 
-                                  return ListView.separated(
+                                  return GridView.builder(
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: stores.length > 5 ? 5 : stores.length,
-                                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 0.76,
+                                    ),
+                                    itemCount: nearbyStores.length > 6 ? 6 : nearbyStores.length,
                                     itemBuilder: (context, index) {
-                                      return RealStoreCard(store: stores[index]);
+                                      return GridStoreCard(store: nearbyStores[index]);
                                     },
                                   );
                                 },
@@ -1135,6 +1144,88 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             delay: 600.ms,
                             curve: Curves.easeOutQuad,
                           ),
+                      AppSpacing.height32,
+
+                      // 5. All Featured Businesses & Shops (Below How Meetly Works)
+                      Builder(
+                        builder: (context) {
+                          final allStoresAsync = ref.watch(storeDirectoryProvider(const StoreDirectoryQuery(
+                            pincode: '',
+                            category: 'All',
+                            search: '',
+                          )));
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'All Featured Shops & Businesses',
+                                          style: textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Verified Directory Listings Across Kerala',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => context.push('/directory'),
+                                    child: const Text('View All'),
+                                  ),
+                                ],
+                              ),
+                              AppSpacing.height12,
+                              allStoresAsync.when(
+                                data: (stores) {
+                                  if (stores.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  // Cap preview to 10 featured stores to keep main UI thread fast
+                                  final displayLimit = stores.length > 10 ? 10 : stores.length;
+
+                                  return GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio: 0.76,
+                                    ),
+                                    itemCount: displayLimit,
+                                    itemBuilder: (context, index) {
+                                      return GridStoreCard(store: stores[index]);
+                                    },
+                                  );
+                                },
+                                loading: () => const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(20),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                                error: (e, _) => const SizedBox.shrink(),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                       AppSpacing.height32,
                     ],
                   ),
@@ -1840,6 +1931,236 @@ class RealStoreCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class GridStoreCard extends StatelessWidget {
+  final BusinessListing store;
+
+  const GridStoreCard({super.key, required this.store});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF6C5CE7);
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StoreDetailScreen(store: store),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : const Color(0xFFEAEAFA),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Image Header with Badges
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: SizedBox(
+                height: 105,
+                width: double.infinity,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Image.network(
+                        store.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, e, s) => Container(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          child: Icon(Icons.storefront_rounded, size: 36, color: primaryColor),
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.65),
+                            ],
+                            stops: const [0.5, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Open/Closed Badge
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: store.isOpenNow
+                              ? Colors.green.withValues(alpha: 0.9)
+                              : Colors.red.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          store.isOpenNow ? 'OPEN' : 'CLOSED',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Rating Badge
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
+                            const SizedBox(width: 2),
+                            Text(
+                              store.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Category overlay on image bottom
+                    Positioned(
+                      bottom: 4,
+                      left: 6,
+                      right: 6,
+                      child: Text(
+                        store.category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Bottom Info Body
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          store.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 11,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                '${store.city} • ${store.pincode}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${store.reviewCount} reviews',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'View',
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 9.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

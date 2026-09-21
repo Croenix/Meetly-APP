@@ -1,10 +1,38 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../database/local_database.dart';
 
 final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
 
 final userLocationStateProvider = StateProvider<LocationDataResult?>((ref) => null);
+
+class PersistentLocationNotifier extends StateNotifier<String?> {
+  PersistentLocationNotifier() : super(null) {
+    _loadSavedLocation();
+  }
+
+  static const String _storageKey = 'saved_user_location';
+
+  Future<void> _loadSavedLocation() async {
+    final saved = await HiveLocalDatabase.instance.getString(_storageKey);
+    if (saved != null && saved.isNotEmpty) {
+      state = saved;
+    }
+  }
+
+  Future<void> setLocation(String? address) async {
+    state = address;
+    if (address != null && address.isNotEmpty) {
+      await HiveLocalDatabase.instance.saveString(_storageKey, address);
+    }
+  }
+}
+
+final selectedLocationProvider =
+    StateNotifierProvider<PersistentLocationNotifier, String?>((ref) {
+  return PersistentLocationNotifier();
+});
 
 String? extractPincodeFromAddress(String? address) {
   if (address == null || address.isEmpty) return null;

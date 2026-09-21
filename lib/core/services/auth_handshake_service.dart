@@ -61,7 +61,7 @@ class AuthHandshakeService {
           'userId': userId,
           'deviceId': deviceId,
         }),
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> data = jsonDecode(response.body);

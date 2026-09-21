@@ -230,7 +230,7 @@ class SyncService {
     try {
       final serverUrl = await fetchServerUrl();
       final uri = Uri.parse('$serverUrl/api/banners');
-      final res = await http.get(uri).timeout(const Duration(seconds: 3));
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {
         final List<dynamic> raw = json.decode(res.body);
@@ -422,7 +422,7 @@ class SyncService {
       final baseUrl = Uri.parse('$serverUrl/api/v1/stores');
       final uri = queryParams.isNotEmpty ? baseUrl.replace(queryParameters: queryParams) : baseUrl;
       
-      final res = await http.get(uri).timeout(const Duration(seconds: 4));
+      final res = await http.get(uri).timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         final decoded = json.decode(res.body);
         List<dynamic> raw = [];

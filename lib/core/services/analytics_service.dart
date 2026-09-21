@@ -28,7 +28,7 @@ class AnalyticsService {
             'platform': kIsWeb ? 'Web' : defaultTargetPlatform.name,
           },
         }),
-      ).timeout(const Duration(seconds: 2));
+      ).timeout(const Duration(seconds: 6));
     } catch (e) {
       if (kDebugMode) {
         print("AnalyticsService: Server telemetry sync offline/ignored ($e)");

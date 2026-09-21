@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/models/business_listing.dart';
+import '../../core/models/service_provider.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/services/location_service.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive_container.dart';
-import '../home/home_screen.dart';
+import '../../data/repositories/provider_repository.dart';
 import 'store_detail_screen.dart';
 
 class StoreDirectoryQuery {
@@ -45,6 +47,51 @@ final storeDirectoryProvider = FutureProvider.family.autoDispose<List<BusinessLi
     search: query.search,
   );
 });
+
+enum UnifiedSearchResultType { store, provider }
+
+class UnifiedSearchItem {
+  final UnifiedSearchResultType type;
+  final String id;
+  final String title;
+  final String category;
+  final String pincode;
+  final String locationText;
+  final double rating;
+  final int reviewCount;
+  final bool isOpen;
+  final BusinessListing? store;
+  final ServiceProvider? provider;
+
+  UnifiedSearchItem.fromStore(BusinessListing s)
+      : type = UnifiedSearchResultType.store,
+        id = s.id,
+        title = s.name,
+        category = s.category,
+        pincode = s.pincode,
+        locationText = '${s.city} • PIN ${s.pincode}',
+        rating = s.rating,
+        reviewCount = s.reviewCount,
+        isOpen = s.isOpenNow,
+        store = s,
+        provider = null;
+
+  UnifiedSearchItem.fromProvider(ServiceProvider p, {String? activePin})
+      : type = UnifiedSearchResultType.provider,
+        id = p.id,
+        title = p.businessName.isNotEmpty ? p.businessName : p.profession,
+        category = p.category,
+        pincode = extractPincodeFromAddress(p.location) ??
+            extractPincodeFromAddress(p.serviceArea) ??
+            activePin ??
+            '682001',
+        locationText = '${p.location} • ₹${p.startingPrice.toInt()} starting',
+        rating = p.rating,
+        reviewCount = p.reviewCount,
+        isOpen = true,
+        store = null,
+        provider = p;
+}
 
 class DirectorySearchScreen extends ConsumerStatefulWidget {
   final String? initialPincode;
@@ -122,27 +169,30 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
     final userLoc = ref.watch(userLocationStateProvider);
     final textLoc = ref.watch(selectedLocationProvider);
 
-    final detectedPincode = userLoc?.pincode ?? extractPincodeFromAddress(textLoc);
+    final detectedPincode = userLoc?.pincode ?? extractPincodeFromAddress(textLoc) ?? '682001';
 
     final directoryQuery = StoreDirectoryQuery(
-      pincode: _selectedPincode,
-      category: _selectedCategory,
-      search: _searchQuery,
+      pincode: 'All',
+      category: 'All',
+      search: '',
     );
 
     final directoryAsync = ref.watch(storeDirectoryProvider(directoryQuery));
+    final providersAsync = ref.watch(providersListProvider);
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF6C5CE7);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Local Business Directory'),
+        title: const Text('Global Directory & Search'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               ref.invalidate(serverPincodesProvider);
               ref.invalidate(storeDirectoryProvider(directoryQuery));
+              ref.invalidate(providersListProvider);
             },
             tooltip: 'Refresh Server Directory',
           ),
@@ -167,7 +217,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                 child: Column(
                   children: [
                     // GPS / Detected Pincode Banner
-                    if (detectedPincode != null && detectedPincode.isNotEmpty) ...[
+                    if (detectedPincode.isNotEmpty) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
@@ -181,7 +231,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'GPS Location: ${userLoc?.locality ?? "Your Area"} (PIN $detectedPincode)',
+                                'Active Area: ${userLoc?.locality ?? "Your Location"} (PIN $detectedPincode)',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -198,7 +248,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 8),
                                   visualDensity: VisualDensity.compact,
                                 ),
-                                child: const Text('Filter by My PIN', style: TextStyle(fontSize: 11)),
+                                child: const Text('Prioritize My PIN', style: TextStyle(fontSize: 11)),
                               ),
                           ],
                         ),
@@ -215,7 +265,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                         });
                       },
                       decoration: InputDecoration(
-                        hintText: 'Search shop name, address, or category...',
+                        hintText: 'Search services, pros, shops, or categories...',
                         prefixIcon: const Icon(Icons.search_rounded),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
@@ -387,33 +437,51 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                 ),
               ),
 
-              // Directory Items List from MongoDB Server
+              // Unified Search Results List (Services + Shops with Pincode Ranking)
               Expanded(
                 child: directoryAsync.when(
-                  data: (listings) {
-                    final filtered = listings.where((item) {
+                  data: (stores) {
+                    final List<ServiceProvider> providersList = providersAsync.value ?? [];
+
+                    // Wrap into Unified Items
+                    final List<UnifiedSearchItem> allItems = [
+                      ...stores.map((s) => UnifiedSearchItem.fromStore(s)),
+                      ...providersList.map((p) => UnifiedSearchItem.fromProvider(p, activePin: detectedPincode)),
+                    ];
+
+                    // Apply Search Query & Category Filters
+                    final filtered = allItems.where((item) {
                       final matchesSearch = _searchQuery.isEmpty ||
-                          item.name.toLowerCase().contains(_searchQuery) ||
-                          item.address.toLowerCase().contains(_searchQuery) ||
-                          item.pincode.contains(_searchQuery) ||
-                          item.category.toLowerCase().contains(_searchQuery);
+                          item.title.toLowerCase().contains(_searchQuery) ||
+                          item.category.toLowerCase().contains(_searchQuery) ||
+                          item.locationText.toLowerCase().contains(_searchQuery) ||
+                          item.pincode.contains(_searchQuery);
 
-                      final matchesPin = _selectedPincode == 'All' || item.pincode.trim() == _selectedPincode.trim();
-                      final matchesCat = _selectedCategory == 'All' || item.category.toLowerCase() == _selectedCategory.toLowerCase();
+                      bool matchesCat = true;
+                      if (_selectedCategory != 'All') {
+                        final catLower = _selectedCategory.toLowerCase();
+                        matchesCat = item.category.toLowerCase().contains(catLower) ||
+                            (item.store?.secondaryCategories.any((c) => c.toLowerCase().contains(catLower)) ?? false);
+                      }
 
-                      return matchesSearch && matchesPin && matchesCat;
+                      bool matchesPinChoice = true;
+                      if (_selectedPincode != 'All') {
+                        matchesPinChoice = item.pincode.trim() == _selectedPincode.trim();
+                      }
+
+                      return matchesSearch && matchesCat && matchesPinChoice;
                     }).toList();
 
                     if (filtered.isEmpty) {
                       return EmptyState(
-                        icon: Icons.storefront_outlined,
+                        icon: Icons.search_off_rounded,
                         title: _selectedPincode != 'All'
-                            ? 'No Shops Found in PIN $_selectedPincode'
-                            : 'No Shops Found for Selected Filters',
+                            ? 'No Services or Shops Found in PIN $_selectedPincode'
+                            : 'No Search Results Found',
                         description: _selectedPincode != 'All'
-                            ? 'No businesses are currently listed under PIN $_selectedPincode. Tap below to view all available businesses across Kerala.'
-                            : 'Try selecting a different category or clearing search filters.',
-                        actionText: _selectedPincode != 'All' ? 'View All Kerala Shops' : 'Reset Filters',
+                            ? 'No matches found in PIN $_selectedPincode. Tap below to search all available services and stores across Kerala.'
+                            : 'Try searching with a different keyword or resetting category filters.',
+                        actionText: _selectedPincode != 'All' ? 'View All Kerala Directory' : 'Reset Filters',
                         onActionPressed: () {
                           setState(() {
                             _selectedPincode = 'All';
@@ -425,178 +493,283 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                       );
                     }
 
-                    return ListView.separated(
+                    // --- PINCODE PRIORITIZATION RANKING ---
+                    // Target PIN for top ranking section
+                    final targetPin = (_selectedPincode != 'All') ? _selectedPincode : detectedPincode;
+
+                    final List<UnifiedSearchItem> topPinResults = [];
+                    final List<UnifiedSearchItem> otherResults = [];
+
+                    for (final item in filtered) {
+                      if (item.pincode.trim() == targetPin.trim()) {
+                        topPinResults.add(item);
+                      } else {
+                        otherResults.add(item);
+                      }
+                    }
+
+                    return ListView(
                       padding: const EdgeInsets.all(16),
-                      itemCount: filtered.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final item = filtered[index];
-                        return InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => StoreDetailScreen(store: item),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E1E2A) : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF2D2D3F) : const Color(0xFFE2E8F0),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
+                      children: [
+                        // SECTION 1: TOP MATCHES IN ACTIVE PINCODE
+                        if (topPinResults.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: primaryColor.withValues(alpha: 0.12),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      _getCategoryIcon(item.category),
-                                      color: primaryColor,
-                                      size: 24,
-                                    ),
+                                child: Text(
+                                  '📍 TOP MATCHES IN PIN $targetPin',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
                                   ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.name,
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
-                                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.amber.withValues(alpha: 0.15),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  const Icon(Icons.star_rounded, size: 12, color: Colors.amber),
-                                                  const SizedBox(width: 2),
-                                                  Text(
-                                                    item.rating.toStringAsFixed(1),
-                                                    style: const TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.amber,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              item.category,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: primaryColor,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: primaryColor.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                'PIN ${item.pincode}',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: primaryColor,
-                                                ),
-                                              ),
-                                            ),
-                                            if (item.isOpenNow) ...[
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.green.withValues(alpha: 0.15),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: const Text(
-                                                  'OPEN',
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.green,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          item.address,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Icon(
-                                    Icons.arrow_forward_ios_rounded,
-                                    size: 14,
-                                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(${topPinResults.length} found)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
                           ),
-                        );
-                      },
+                          const SizedBox(height: 12),
+                          ...topPinResults.map((item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildUnifiedCard(context, item, isDark, primaryColor),
+                              )),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // SECTION 2: OTHER MATCHES ACROSS KERALA
+                        if (otherResults.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '🌐 OTHER SERVICES & BUSINESSES ACROSS KERALA',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(${otherResults.length} found)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ...otherResults.map((item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildUnifiedCard(context, item, isDark, primaryColor),
+                              )),
+                        ],
+                      ],
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (err, _) => EmptyState(
                     icon: Icons.error_outline_rounded,
                     title: 'Server Offline',
-                    description: 'Loading local shop directory cache...',
+                    description: 'Loading local shop & service directory cache...',
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnifiedCard(
+    BuildContext context,
+    UnifiedSearchItem item,
+    bool isDark,
+    Color primaryColor,
+  ) {
+    final isProvider = item.type == UnifiedSearchResultType.provider;
+    final tagBg = isProvider
+        ? (isDark ? const Color(0xFF4C1D95) : const Color(0xFFDDD6FE))
+        : (isDark ? const Color(0xFF065F46) : const Color(0xFFA7F3D0));
+    final tagText = isProvider
+        ? (isDark ? const Color(0xFFDDD6FE) : const Color(0xFF5B21B6))
+        : (isDark ? const Color(0xFFA7F3D0) : const Color(0xFF064E3B));
+
+    return InkWell(
+      onTap: () {
+        if (isProvider && item.provider != null) {
+          context.push('/provider/${item.provider!.id}');
+        } else if (item.store != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StoreDetailScreen(store: item.store!),
+            ),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2A) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2D2D3F) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isProvider ? Icons.engineering_rounded : _getCategoryIcon(item.category),
+                  color: primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, size: 12, color: Colors.amber),
+                              const SizedBox(width: 2),
+                              Text(
+                                item.rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        // Type Badge (Service Pro vs Store)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: tagBg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isProvider ? 'SERVICE PRO' : 'STORE',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: tagText,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          item.category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'PIN ${item.pincode}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.locationText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
               ),
             ],
           ),
