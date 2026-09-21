@@ -65,7 +65,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/directory',
-      builder: (context, state) => const DirectorySearchScreen(),
+      builder: (context, state) {
+        final pincode = state.extra as String?;
+        return DirectorySearchScreen(initialPincode: pincode);
+      },
     ),
     GoRoute(
       path: '/category/:id',

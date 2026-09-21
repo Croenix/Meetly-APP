@@ -938,7 +938,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                   ),
                                   TextButton(
-                                    onPressed: () => context.push('/search'),
+                                    onPressed: () => context.push('/directory', extra: activePin),
                                     child: const Text('View All'),
                                   ),
                                 ],

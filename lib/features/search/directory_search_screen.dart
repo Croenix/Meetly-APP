@@ -47,7 +47,8 @@ final storeDirectoryProvider = FutureProvider.family.autoDispose<List<BusinessLi
 });
 
 class DirectorySearchScreen extends ConsumerStatefulWidget {
-  const DirectorySearchScreen({super.key});
+  final String? initialPincode;
+  const DirectorySearchScreen({super.key, this.initialPincode});
 
   @override
   ConsumerState<DirectorySearchScreen> createState() => _DirectorySearchScreenState();
@@ -81,6 +82,10 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPincode != null && widget.initialPincode!.trim().isNotEmpty) {
+      _selectedPincode = widget.initialPincode!.trim();
+      _initializedUserPincode = true;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndSetUserLocationPincode();
     });
@@ -393,7 +398,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                           item.pincode.contains(_searchQuery) ||
                           item.category.toLowerCase().contains(_searchQuery);
 
-                      final matchesPin = _selectedPincode == 'All' || item.pincode == _selectedPincode;
+                      final matchesPin = _selectedPincode == 'All' || item.pincode.trim() == _selectedPincode.trim();
                       final matchesCat = _selectedCategory == 'All' || item.category.toLowerCase() == _selectedCategory.toLowerCase();
 
                       return matchesSearch && matchesPin && matchesCat;
@@ -401,11 +406,22 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
 
                     if (filtered.isEmpty) {
                       return EmptyState(
-                        icon: Icons.search_off_rounded,
-                        title: 'No Shops Found for Selected PIN',
+                        icon: Icons.storefront_outlined,
+                        title: _selectedPincode != 'All'
+                            ? 'No Shops Found in PIN $_selectedPincode'
+                            : 'No Shops Found for Selected Filters',
                         description: _selectedPincode != 'All'
-                            ? 'No businesses registered under PIN $_selectedPincode yet. Try selecting "All" or a different pincode.'
-                            : 'Try selecting a different category or clear search filter.',
+                            ? 'No businesses are currently listed under PIN $_selectedPincode. Tap below to view all available businesses across Kerala.'
+                            : 'Try selecting a different category or clearing search filters.',
+                        actionText: _selectedPincode != 'All' ? 'View All Kerala Shops' : 'Reset Filters',
+                        onActionPressed: () {
+                          setState(() {
+                            _selectedPincode = 'All';
+                            _selectedCategory = 'All';
+                            _searchQuery = '';
+                            _searchController.clear();
+                          });
+                        },
                       );
                     }
 

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "evt_1790017620647_0hxas",
+    "name": "screen_view",
+    "parameters": {
+      "screen_name": "Home",
+      "timestamp": "2026-09-22T00:37:01.442143",
+      "platform": "android"
+    },
+    "timestamp": "2026-09-22T00:37:01.442143",
+    "platform": "android"
+  },
+  {
+    "id": "evt_1790017615745_0adwe",
+    "name": "app_open",
+    "parameters": {
+      "event": "app_open",
+      "timestamp": "2026-09-22T00:36:56.137717",
+      "platform": "android"
+    },
+    "timestamp": "2026-09-22T00:36:56.137717",
+    "platform": "android"
+  }
+]

@@ -42,19 +42,32 @@ exports.getAllStores = asyncHandler(async (req, res) => {
   const { category, city, pincode, search } = req.query;
 
   const filter = {};
-  if (category) filter.category = new RegExp(category, 'i');
-  if (city) filter.city = new RegExp(city, 'i');
-  if (pincode) filter.pincode = pincode;
-  if (search) {
+  if (category && category !== 'All' && category !== 'all') {
+    filter.category = new RegExp(escapeRegex(category), 'i');
+  }
+  if (city && city !== 'All' && city !== 'all') {
+    filter.city = new RegExp(escapeRegex(city), 'i');
+  }
+  if (pincode && pincode !== 'All' && pincode !== 'all') {
+    filter.pincode = pincode.trim();
+  }
+  if (search && search.trim()) {
+    const s = escapeRegex(search.trim());
     filter.$or = [
-      { name: new RegExp(search, 'i') },
-      { category: new RegExp(search, 'i') },
-      { address: new RegExp(search, 'i') },
+      { name: new RegExp(s, 'i') },
+      { category: new RegExp(s, 'i') },
+      { address: new RegExp(s, 'i') },
+      { pincode: search.trim() },
     ];
   }
 
   try {
-    const stores = await Store.find(filter).sort({ createdAt: -1 });
+    let stores = await Store.find(filter).sort({ createdAt: -1 });
+
+    // If specific pincode or category produced 0 results in DB, attempt relaxed fallback to all stores
+    if ((!stores || stores.length === 0) && (pincode || category || search)) {
+      stores = await Store.find({}).sort({ createdAt: -1 });
+    }
 
     if (stores && stores.length > 0) {
       return successResponse(res, 200, 'Stores retrieved successfully', stores, { count: stores.length });
