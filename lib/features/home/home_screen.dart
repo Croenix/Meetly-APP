@@ -617,7 +617,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         AppSpacing.width12,
                                         Expanded(
                                           child: Text(
-                                            'Search',
+                                            'Search services, shops, businesses, pros...',
                                             style: textTheme.bodyMedium
                                                 ?.copyWith(
                                                   color: isDark

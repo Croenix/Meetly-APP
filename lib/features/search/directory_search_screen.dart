@@ -216,40 +216,45 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                 ),
                 child: Column(
                   children: [
-                    // GPS / Detected Pincode Banner
+                    // Active Location Pincode Banner
                     if (detectedPincode.isNotEmpty) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.gps_fixed_rounded, size: 16, color: primaryColor),
-                            const SizedBox(width: 8),
+                            Icon(Icons.location_on_rounded, size: 20, color: primaryColor),
+                            const SizedBox(width: 10),
                             Expanded(
-                              child: Text(
-                                'Active Area: ${userLoc?.locality ?? "Your Location"} (PIN $detectedPincode)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryColor,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Active Location: ${userLoc?.locality ?? (textLoc ?? "Selected Area")} (PIN $detectedPincode)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Results matching PIN $detectedPincode are automatically ranked at the top',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (_selectedPincode != detectedPincode)
-                              TextButton(
-                                onPressed: () {
-                                  setState(() => _selectedPincode = detectedPincode);
-                                },
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                child: const Text('Prioritize My PIN', style: TextStyle(fontSize: 11)),
-                              ),
                           ],
                         ),
                       ),
@@ -511,18 +516,18 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                     return ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
-                        // SECTION 1: TOP MATCHES IN ACTIVE PINCODE
+                        // SECTION 1: TOP MATCHES IN ACTIVE LOCATION PINCODE
                         if (topPinResults.isNotEmpty) ...[
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
                                   color: primaryColor,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '📍 TOP MATCHES IN PIN $targetPin',
+                                  '📍 TOP MATCHES IN YOUR AREA (PIN $targetPin)',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -532,7 +537,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '(${topPinResults.length} found)',
+                                '(${topPinResults.length} near you)',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -554,7 +559,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
                                   color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                                   borderRadius: BorderRadius.circular(8),
@@ -570,7 +575,7 @@ class _DirectorySearchScreenState extends ConsumerState<DirectorySearchScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '(${otherResults.length} found)',
+                                '(${otherResults.length} other areas)',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

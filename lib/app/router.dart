@@ -9,7 +9,6 @@ import '../features/auth/register_screen.dart';
 
 // Screens implemented in Phase 2
 import '../features/home/home_screen.dart';
-import '../features/search/search_screen.dart';
 import '../features/search/category_screen.dart';
 import '../features/search/directory_search_screen.dart';
 import '../features/providers/provider_profile_screen.dart';
@@ -61,7 +60,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/search',
-      builder: (context, state) => const SearchScreen(),
+      builder: (context, state) {
+        final pincode = state.extra as String?;
+        return DirectorySearchScreen(initialPincode: pincode);
+      },
     ),
     GoRoute(
       path: '/directory',
